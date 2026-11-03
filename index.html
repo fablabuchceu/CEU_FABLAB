@@ -140,7 +140,7 @@ button{font:inherit;color:inherit}
 .rules{background:var(--surface);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;min-width:0}
 .rhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rhead b{flex:1;min-width:160px;font:700 18px/1.15 var(--f-display)}
-.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--field)}
+.lang{flex:none;display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--field)}
 .lang button{all:unset;cursor:pointer;font:600 12px var(--f-mono);padding:5px 10px;border-radius:999px;color:var(--muted)}
 .lang button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
 .rbody{padding:4px 16px 16px;font-size:14.5px;line-height:1.5}
@@ -229,11 +229,12 @@ const CONFIG = {
 
   CREATE_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagKd1xxwNKHBWMYC/form",
   FORGOT_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagfix2aQ1lqOqEp9/form",
-  SECURE_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pageRHfHjstyRnFak/form",
   CANCEL_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagPvXUS8hYoHCP4J/form",
   HOURS_URL:  "https://airtable.com/appeQ6gkuiJAq7wiT/pagKr3hOks4XqRsmD/form",
   CALENDAR_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/shrvGOhBZWWmbCsk3",
-  RULES_PDF: "reglamiento.pdf",            // copy of the rules document, in the repository
+  // Rules PDF for each language. Now one PDF: Castellano on page 1, English on page 3.
+  // If they become two files, e.g. { es: "reglamiento-es.pdf", en: "rules-en.pdf" }.
+  RULES_PDF: { es: "reglamiento.pdf#page=1", en: "reglamiento.pdf#page=3" },
   RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
 
   MACHINES: [ { id: "Fusion Edge 60W", short: "Fusion Edge", w: "60 W" }, { id: "Helix 50W", short: "Helix", w: "50 W" } ],
@@ -260,11 +261,12 @@ const CONFIG = {
   // ---- Madrid-time helpers ----
   const partsFmt = new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" });
   function mad(d) { const o = {}; for (const p of partsFmt.formatToParts(d)) o[p.type] = p.value; return { y:+o.year, m:+o.month, d:+o.day, h:+o.hour, min:+o.minute, key: o.year + "-" + o.month + "-" + o.day }; }
-  const fES = new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" });
-  const fEN = new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" });
-  const fShort = new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, day: "numeric", month: "short" });
+  const FMT = { es: new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" }),
+                en: new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" }) };
+  const FSHORT = { es: new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, day: "numeric", month: "short" }),
+                   en: new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, day: "numeric", month: "short" }) };
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const WD = ["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
+  const WDS = { es: ["Do","Lu","Ma","Mi","Ju","Vi","Sá"], en: ["Su","Mo","Tu","We","Th","Fr","Sa"] };
   const noonUTC = key => { const [y,m,d] = key.split("-").map(Number); return new Date(Date.UTC(y, m-1, d, 12)); };
 
   // ---- Sign-in (from personal link #e=…&p=…&c=…) ----
@@ -329,15 +331,25 @@ const CONFIG = {
 <p class="warn"><b>Notice:</b> if the file does not meet all of these technical requirements when we review it in the workshop, it will be rejected and the part will not be cut or engraved.</p>
 <p class="key">Book via the QR code; files are reviewed at the time of booking. Students must be present while their work is being done; if the student is not present, the job will not be carried out. The student loads and unloads the material from the machine.</p>`
   };
+  // ---- Language (one at a time; ES/EN switch at the top of every screen) ----
+  const L = (es, en) => S.lang === "en" ? en : es;
+  const fDay = d => FMT[S.lang].format(d);
+  const pdfHref = () => CONFIG.RULES_PDF[S.lang] || CONFIG.RULES_PDF.es;
+  function initLang() {
+    try { const s = localStorage.getItem("eset_lang"); if (s === "es" || s === "en") return s; } catch(e) {}
+    return /^en(-|$)/i.test(navigator.language || "") ? "en" : "es";
+  }
+  const langSwitch = () => `<div class="lang" role="group" aria-label="${L("Idioma", "Language")}"><button data-l="es" lang="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" lang="en" aria-pressed="${S.lang === "en"}">EN</button></div>`;
+
   function rulesPanel(withEnd) {
-    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 Reglamiento y uso - Rules and usage</b>
-      <div class="lang" role="group" aria-label="Idioma - Language"><button data-l="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" aria-pressed="${S.lang === "en"}">EN</button></div></div>
-      <div class="rbody" id="rbody" lang="${S.lang}">${RULES[S.lang]}${withEnd ? `<div class="rend" id="rend">${S.readDone ? "✓ Has llegado al final · You reached the end" : "↓ Lee hasta el final · Read to the end"}</div>` : ""}</div>
-      <div class="rfoot"><a href="${esc(CONFIG.RULES_PDF)}" target="_blank" rel="noopener">⬇️ PDF</a></div></section>`;
+    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
+      <div class="rbody" id="rbody">${RULES[S.lang]}${withEnd ? `<div class="rend" id="rend">${S.readDone ? L("✓ Has llegado al final", "✓ You reached the end") : L("↓ Lee hasta el final", "↓ Read to the end")}</div>` : ""}</div>
+      <div class="rfoot"><a href="${esc(pdfHref())}" target="_blank" rel="noopener">⬇️ PDF (${S.lang.toUpperCase()})</a></div></section>`;
   }
 
   // ---- State ----
   const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: false, readTick: false, ack: false };
+  S.lang = initLang();
   try { S.ack = sessionStorage.getItem("eset_ack") === "1"; } catch(e) {}
 
   // ---- Data ----
@@ -394,7 +406,7 @@ const CONFIG = {
   const mine = () => (S.records || []).filter(r => r.machine === S.machine);
   function dayKeys() { const set = new Set(); (S.records || []).forEach(r => set.add(mad(r.start).key)); return [...set].sort(); }
   const slotsFor = key => mine().filter(r => mad(r.start).key === key);
-  function dstat(key) { const s = slotsFor(key); if (!s.length) return { c: "closed", t: "Cerrado" }; const f = s.filter(r => r.available).length; return f ? { c: "av", t: f + " libres", n: f } : { c: "full", t: "Completo" }; }
+  function dstat(key) { const s = slotsFor(key); if (!s.length) return { c: "closed", t: L("Cerrado", "Closed") }; const f = s.filter(r => r.available).length; return f ? { c: "av", t: f + " " + (f === 1 ? L("libre", "free") : L("libres", "free")), n: f } : { c: "full", t: L("Completo", "Full") }; }
   function firstFree() { return dayKeys().find(k => dstat(k).c === "av") || null; }
 
   // ---- Links ----
@@ -406,43 +418,43 @@ const CONFIG = {
 
   // ---- Views ----
   function topbar(title, sub, back) {
-    const me = user ? `<div class="me"><i aria-hidden="true">${esc(user.e[0].toUpperCase())}</i><button id="out">Salir - Sign out</button></div>` : "";
-    return `<div class="top">${back ? `<button class="back" id="back" aria-label="Atrás - Back">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${me}</div>`;
+    const me = user ? `<div class="me"><i aria-hidden="true">${esc(user.e[0].toUpperCase())}</i><button id="out">${L("Salir", "Sign out")}</button></div>` : "";
+    return `<div class="top">${back ? `<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
   }
-  const demoNote = () => DEMO ? `<div class="demo">Modo demostración: horas de ejemplo · Demo mode: example hours</div>` : "";
-  const docCard = () => `<a class="doc" href="${esc(CONFIG.RULES_PDF)}" target="_blank" rel="noopener"><span class="ic">PDF</span><div><b>Reglamiento y uso - Rules and usage</b><span>Léelo antes de reservar · Read it before booking</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
+  const demoNote = () => DEMO ? `<div class="demo">${L("Modo demostración: horas de ejemplo", "Demo mode: example hours")}</div>` : "";
+  const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">PDF</span><div><b>${L("Reglamiento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
 
   function vHome() {
     return topbar("Taller ESET", "Fab Lab 2026-2027", false) + `<div class="scr">${demoNote()}
       <div class="hero"><div class="stripe" aria-hidden="true"></div>
-        <h1>¿Qué máquina quieres usar?</h1><p>Which machine do you want to use?</p>
-        ${user ? `<p>Has entrado como <b>${esc(user.e)}</b> · Signed in</p>` : ""}</div>
+        <h1>${L("¿Qué máquina quieres usar?", "Which machine do you want to use?")}</h1>
+        ${user ? `<p>${L("Has entrado como", "Signed in as")} <b>${esc(user.e)}</b></p>` : ""}</div>
       <div class="tiles">
-        <button class="tile" id="tLaser"><div class="pic">${svg("svgLaser")}</div><div class="cap"><div><b>Corte láser - Laser</b><span>${CONFIG.MACHINES.map(m => esc(m.id)).join(" · ")}</span></div><span class="go">${I.next}</span></div></button>
-        <div class="tile" aria-disabled="true"><span class="soon">Próximamente - Soon</span><div class="pic">${svg("svgPrinter")}</div><div class="cap"><div><b>Impresión 3D - 3D printing</b><span>Disponible pronto · Available soon</span></div><span class="go">${I.next}</span></div></div>
+        <button class="tile" id="tLaser"><div class="pic">${svg("svgLaser")}</div><div class="cap"><div><b>${L("Corte láser", "Laser cutting")}</b><span>${CONFIG.MACHINES.map(m => esc(m.id)).join(" · ")}</span></div><span class="go">${I.next}</span></div></button>
+        <div class="tile" aria-disabled="true"><span class="soon">${L("Próximamente", "Coming soon")}</span><div class="pic">${svg("svgPrinter")}</div><div class="cap"><div><b>${L("Impresión 3D", "3D printing")}</b><span>${L("Disponible pronto", "Available soon")}</span></div><span class="go">${I.next}</span></div></div>
       </div>
-      ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span><b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.<br>Remember me on this device. Don't tick it on a workshop computer.</span></label>` : ""}
+      ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>` : ""}
     </div>`;
   }
   function vLaser() {
-    return topbar("Corte láser - Laser", "Cortadoras láser CO₂", true) + `<div class="scr">
+    return topbar(L("Corte láser", "Laser cutting"), L("Cortadoras láser CO₂", "CO₂ laser cutters"), true) + `<div class="scr">
       <div class="banner">${svg("svgLaser")}</div>
       <div class="actions">
-        <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>Solicitar cita - Book</b><span>Ver horas libres y reservar · See free hours and book</span></div><span class="ch">${I.next}</span></button>
-        <button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>Crear cuenta - Create account</b><span>Primera vez: lee el reglamento · First time: read the rules</span></div><span class="ch">${I.next}</span></button>
+        <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>${L("Solicitar cita", "Book")}</b><span>${L("Ver horas libres y reservar", "See free hours and book")}</span></div><span class="ch">${I.next}</span></button>
+        <button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button>
       </div>
       ${docCard()}
-      <p class="note"><b>ES 🔗 ¿Ya tienes cuenta? Abre el enlace personal de tu correo y entras directamente.</b><br>EN Already have an account? Open the personal link in your email to go straight in.</p>
+      <p class="note">${L("🔗 ¿Ya tienes cuenta? Abre el enlace personal de tu correo y entras directamente.", "🔗 Already have an account? Open the personal link in your email to go straight in.")}</p>
     </div>`;
   }
   function vGate() {
     const ok = S.readDone && S.readTick;
-    return topbar("Crear cuenta - Create account", "Paso 1: reglamento · Step 1: rules", true) + `<div class="scr">
-      <p class="note"><b>ES 📄 Lee el reglamento hasta el final. Después marca la casilla y crea tu cuenta.</b><br>EN Read the rules to the end. Then tick the box and create your account.</p>
+    return topbar(L("Crear cuenta", "Create account"), L("Paso 1: reglamento", "Step 1: rules"), true) + `<div class="scr">
+      <p class="note">${L("📄 Lee el reglamento hasta el final. Después marca la casilla y crea tu cuenta.", "📄 Read the rules to the end. Then tick the box and create your account.")}</p>
       ${rulesPanel(true)}
       <div class="gate">
-        <label class="chk" for="gTick"><input type="checkbox" id="gTick" ${S.readTick ? "checked" : ""} ${S.readDone ? "" : "disabled"}><span><b>He leído el reglamento y lo cumpliré.</b><br>I have read the rules and will follow them.</span></label>
-        <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>Crear cuenta - Create account<small>${ok ? "Se abre el formulario · Opens the form" : S.readDone ? "Marca la casilla · Tick the box" : "Primero lee hasta el final · Read to the end first"}</small></button>
+        <label class="chk" for="gTick"><input type="checkbox" id="gTick" ${S.readTick ? "checked" : ""} ${S.readDone ? "" : "disabled"}><span><b>${L("He leído el reglamento y lo cumpliré.", "I have read the rules and will follow them.")}</b></span></label>
+        <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>${L("Crear cuenta", "Create account")}<small>${ok ? L("Se abre el formulario", "Opens the form") : S.readDone ? L("Marca la casilla", "Tick the box") : L("Primero lee hasta el final", "Read to the end first")}</small></button>
       </div></div>`;
   }
   function vCal() {
@@ -450,61 +462,65 @@ const CONFIG = {
     if (S.loading && !S.records) {
       body = `<div class="skel"></div><div class="skel"></div><div class="skel"></div>`;
     } else if (S.error) {
-      body = `<div class="state"><p><b>No se pueden cargar las horas ahora.</b><br>Couldn't load the hours right now.</p>
-        <button class="btn2" id="retry">Reintentar - Try again</button>
-        <p class="note">También puedes reservar en el formulario de siempre · You can also book in the usual form: <a href="${esc(CONFIG.FORM_OPEN)}" target="_blank" rel="noopener">Solicitar cita - Book</a></p></div>`;
+      body = `<div class="state"><p><b>${L("No se pueden cargar las horas ahora.", "Couldn't load the hours right now.")}</b></p>
+        <button class="btn2" id="retry">${L("Reintentar", "Try again")}</button>
+        <p class="note">${L("También puedes reservar en el formulario de siempre:", "You can also book in the usual form:")} <a href="${esc(CONFIG.FORM_OPEN)}" target="_blank" rel="noopener">${L("Solicitar cita", "Book")}</a></p></div>`;
     } else {
       const keys = dayKeys(); let strip = "", lastWk = null;
       keys.forEach(k => {
         const d = noonUTC(k), wd = d.getUTCDay(), mon = new Date(d.getTime() - ((wd + 6) % 7) * 86400000), wk = mon.toISOString().slice(0,10);
-        if (wk !== lastWk) { strip += `<span class="wk" aria-hidden="true">${esc(fShort.format(mon))}</span>`; lastWk = wk; }
+        if (wk !== lastWk) { strip += `<span class="wk" aria-hidden="true">${esc(FSHORT[S.lang].format(mon))}</span>`; lastWk = wk; }
         const st = dstat(k), on = S.day === k;
-        strip += `<button class="dchip ${st.c}" data-k="${k}" aria-pressed="${on}" ${st.c !== "av" ? "disabled" : ""} aria-label="${esc(fES.format(d))}, ${esc(st.t)}"><span class="w">${WD[wd]}</span><span class="n">${+k.slice(8)}</span><span class="f">${st.c === "av" ? st.n + " libres" : st.t}</span></button>`;
+        strip += `<button class="dchip ${st.c}" data-k="${k}" aria-pressed="${on}" ${st.c !== "av" ? "disabled" : ""} aria-label="${esc(fDay(d))}, ${esc(st.t)}"><span class="w">${WDS[S.lang][wd]}</span><span class="n">${+k.slice(8)}</span><span class="f">${esc(st.t)}</span></button>`;
       });
       const sl = S.day ? slotsFor(S.day) : [];
       const hrs = sl.map((r, i) => { const m = mad(r.start), on = S.slot && S.slot.label === r.label;
-        return r.available ? `<button class="hr" data-i="${i}" aria-pressed="${!!on}">${pad(m.h)}:${pad(m.min)}<small>Libre - Free</small></button>`
-                           : `<button class="hr busy" disabled>${pad(m.h)}:${pad(m.min)}<small>Ocupado - Taken</small></button>`; }).join("");
+        return r.available ? `<button class="hr" data-i="${i}" aria-pressed="${!!on}">${pad(m.h)}:${pad(m.min)}<small>${L("Libre", "Free")}</small></button>`
+                           : `<button class="hr busy" disabled>${pad(m.h)}:${pad(m.min)}<small>${L("Ocupado", "Taken")}</small></button>`; }).join("");
       const cl = cancelLink();
-      body = `${keys.length ? "" : `<div class="state"><p><b>No hay horas en los próximos ${CONFIG.DAYS_AHEAD} días.</b><br>No hours in the next ${CONFIG.DAYS_AHEAD} days.</p></div>`}
-        <div class="sect"><h2>Día <small>- Day</small></h2><span>Desliza → · Swipe</span></div>
+      body = `${keys.length ? "" : `<div class="state"><p><b>${L(`No hay horas en los próximos ${CONFIG.DAYS_AHEAD} días.`, `No hours in the next ${CONFIG.DAYS_AHEAD} days.`)}</b></p></div>`}
+        <div class="sect"><h2>${L("Día", "Day")}</h2><span>${L("Desliza →", "Swipe →")}</span></div>
         <div class="strip" id="strip">${strip}</div>
-        <div class="sect"><h2>Hora <small>- Hour</small></h2><span>1 h</span></div>
-        ${S.day ? `<p class="dayh"><b>${esc(cap(fES.format(noonUTC(S.day))))}</b> · ${esc(fEN.format(noonUTC(S.day)))}</p>` : ""}
-        <div class="hours">${hrs || '<p class="note" style="grid-column:1/-1">No hay horas libres. Elige otro día · No free hours. Pick another day.</p>'}</div>
-        <p class="note"><b>ES Máx. 2 h al día y 3 h a la semana. Después confirma la cita desde el correo.</b><br>EN Max 2 h a day and 3 h a week. Then confirm the booking from the email.</p>
-        <div class="mini">${cl ? `<a href="${esc(cl)}" target="_blank" rel="noopener">❌ Cancelar cita - Cancel</a>` : ""}<a href="${esc(hoursLink())}" target="_blank" rel="noopener">⏱️ Mis horas - My hours</a><a href="${esc(CONFIG.SECURE_URL)}" target="_blank" rel="noopener">🛡️ Proteger mi cuenta - Secure account</a></div>`;
+        <div class="sect"><h2>${L("Hora", "Hour")}</h2><span>1 h</span></div>
+        ${S.day ? `<p class="dayh"><b>${esc(cap(fDay(noonUTC(S.day))))}</b></p>` : ""}
+        <div class="hours">${hrs || `<p class="note" style="grid-column:1/-1">${L("No hay horas libres. Elige otro día.", "No free hours. Pick another day.")}</p>`}</div>
+        <p class="note">${L("Máx. 2 h al día y 3 h a la semana. Después confirma la cita desde el correo.", "Max 2 h a day and 3 h a week. Then confirm the booking from the email.")}</p>
+        <div class="mini">${cl ? `<a href="${esc(cl)}" target="_blank" rel="noopener">❌ ${L("Cancelar cita", "Cancel a booking")}</a>` : ""}<a href="${esc(hoursLink())}" target="_blank" rel="noopener">⏱️ ${L("Mis horas", "My hours")}</a></div>`;
     }
     const sel = S.slot ? mad(S.slot.start) : null;
     const ready = S.slot && S.ack;
-    return topbar("Solicitar cita - Book", `${CONFIG.DAYS_AHEAD} días · ${CONFIG.DAYS_AHEAD} days`, true) + `<div class="scr split" style="padding-bottom:8px"><div style="display:grid;gap:16px;min-width:0">${demoNote()}
-      <div class="mseg" role="group" aria-label="Elige una máquina - Choose a machine">${CONFIG.MACHINES.map(m => `<button data-m="${esc(m.id)}" aria-pressed="${S.machine === m.id}">${esc(m.short)}<small>${esc(m.w)}</small></button>`).join("")}</div>
+    return topbar(L("Solicitar cita", "Book"), `${CONFIG.DAYS_AHEAD} ${L("días", "days")}`, true) + `<div class="scr split" style="padding-bottom:8px"><div style="display:grid;gap:16px;min-width:0">${demoNote()}
+      <div class="mseg" role="group" aria-label="${L("Elige una máquina", "Choose a machine")}">${CONFIG.MACHINES.map(m => `<button data-m="${esc(m.id)}" aria-pressed="${S.machine === m.id}">${esc(m.short)}<small>${esc(m.w)}</small></button>`).join("")}</div>
       ${body}
-      <label class="chk ackbox" for="ack"><input type="checkbox" id="ack" ${S.ack ? "checked" : ""}><span><b>He leído el reglamento y mi archivo lo cumple.</b> (Está al lado o al final de la página.)<br>I have read the rules and my file meets them. (It's beside or at the bottom of the page.)</span></label>
-      <div class="bar"><button class="cta" id="cta" ${ready ? "" : 'aria-disabled="true"'}>${S.slot ? `Reservar ${pad(sel.h)}:${pad(sel.min)}<small>${S.ack ? esc(S.machine) + " · " + esc(fES.format(S.slot.start)) : "Marca la casilla del reglamento · Tick the rules box"}</small>` : `Elige una hora<small>Choose an hour</small>`}</button></div>
+      <label class="chk ackbox" for="ack"><input type="checkbox" id="ack" ${S.ack ? "checked" : ""}><span>${L("<b>He leído el reglamento y mi archivo lo cumple.</b> (Está al lado o al final de la página.)", "<b>I have read the rules and my file meets them.</b> (They're beside or at the bottom of the page.)")}</span></label>
+      <div class="bar"><button class="cta" id="cta" ${ready ? "" : 'aria-disabled="true"'}>${S.slot ? `${L("Reservar", "Book")} ${pad(sel.h)}:${pad(sel.min)}<small>${S.ack ? esc(S.machine) + " · " + esc(fDay(S.slot.start)) : L("Marca la casilla del reglamento", "Tick the rules box")}</small>` : `${L("Elige una hora", "Choose an hour")}<small>${L("Toca una hora libre", "Tap a free hour")}</small>`}</button></div>
       </div>${rulesPanel(false)}</div>`;
   }
   function vSheet() {
+    const foot = href => `<div class="sfoot">${L("¿No carga?", "Not loading?")} <a href="${esc(href)}" target="_blank" rel="noopener">${L("Abrir el formulario", "Open the form")}</a></div>`;
+    const closeBtn = `<button class="x" id="close" aria-label="${L("Cerrar", "Close")}">✕</button>`;
     if (S.sheet === "create") {
       const q = pf(CONFIG.PREFILL.rules, "true"), embed = CONFIG.CREATE_URL.replace("airtable.com/", "airtable.com/embed/");
-      const frame = DEMO ? `<div class="scr"><div class="state"><p><b>Modo demostración.</b> Aquí se abre el formulario Crear cuenta con la casilla del reglamento ya marcada.<br>Demo mode. The Crear cuenta form opens here.</p></div></div>` : `<iframe title="Crear cuenta - Create account" src="${esc(embed + "?" + q)}"></iframe>`;
+      const frame = DEMO ? `<div class="scr"><div class="state"><p>${L("<b>Modo demostración.</b> Aquí se abre el formulario Crear cuenta con la casilla del reglamento ya marcada.", "<b>Demo mode.</b> The Crear cuenta form opens here, with the rules box already ticked.")}</p></div></div>` : `<iframe title="Crear cuenta - Create account" src="${esc(embed + "?" + q)}"></iframe>`;
       return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
-        <div class="shead"><div><b id="shT">Crear cuenta - Create account</b><span>Confirma desde tu correo en 1 hora · Confirm from your email within 1 hour</span></div><button class="x" id="close" aria-label="Cerrar - Close">✕</button></div>
-        ${frame}<div class="sfoot">¿No carga? · Not loading? <a href="${esc(CONFIG.CREATE_URL + "?" + q)}" target="_blank" rel="noopener">Abrir el formulario - Open the form</a></div></div>`;
+        <div class="shead"><div><b id="shT">${L("Crear cuenta", "Create account")}</b><span>${L("Confirma desde tu correo en 1 hora", "Confirm from your email within 1 hour")}</span></div>${closeBtn}</div>
+        ${frame}${foot(CONFIG.CREATE_URL + "?" + q)}</div>`;
     }
     if (!S.sheet || !S.slot) return "";
     const q = bookQuery(), sel = mad(S.slot.start);
-    const frame = DEMO ? `<div class="scr"><div class="state"><p><b>Modo demostración.</b> Aquí se abre el formulario Solicitar cita con la máquina y la hora ya puestas${user ? ", y tu email y PIN" : ""}.<br>Demo mode. The Solicitar cita form opens here, prefilled.</p></div></div>`
+    const frame = DEMO ? `<div class="scr"><div class="state"><p>${L(`<b>Modo demostración.</b> Aquí se abre el formulario Solicitar cita con la máquina y la hora ya puestas${user ? ", y tu email y PIN" : ""}.`, `<b>Demo mode.</b> The Solicitar cita form opens here with the machine and hour filled in${user ? ", and your email and PIN" : ""}.`)}</p></div></div>`
                        : `<iframe title="Solicitar cita - Book" src="${esc(CONFIG.FORM_EMBED + "?" + q)}" loading="eager"></iframe>`;
     return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
-      <div class="shead"><div><b id="shT">${esc(S.machine)} · ${pad(sel.h)}:${pad(sel.min)}</b><span>${esc(fES.format(S.slot.start))}</span></div><button class="x" id="close" aria-label="Cerrar - Close">✕</button></div>
+      <div class="shead"><div><b id="shT">${esc(S.machine)} · ${pad(sel.h)}:${pad(sel.min)}</b><span>${esc(fDay(S.slot.start))}</span></div>${closeBtn}</div>
       ${frame}
-      <div class="sfoot">¿No carga? · Not loading? <a href="${esc(CONFIG.FORM_OPEN + "?" + q)}" target="_blank" rel="noopener">Abrir el formulario - Open the form</a></div></div>`;
+      ${foot(CONFIG.FORM_OPEN + "?" + q)}</div>`;
   }
 
   // ---- Render + events ----
   function render() {
     const sl = $("strip") ? $("strip").scrollLeft : 0;
+    document.documentElement.lang = S.lang;
+    document.title = L("Taller ESET - Reservas", "ESET Workshop - Bookings");
     app.innerHTML = (S.screen === "home" ? vHome() : S.screen === "laser" ? vLaser() : S.screen === "gate" ? vGate() : vCal()) + vSheet();
     app.classList.toggle("wide", S.screen === "cal");
     if ($("strip")) $("strip").scrollLeft = sl;
@@ -519,7 +535,7 @@ const CONFIG = {
     on("gGo", () => { if (!(S.readDone && S.readTick)) return; S.sheet = "create"; render(); });
     const ack = $("ack"); if (ack) ack.onchange = () => { S.ack = ack.checked; try { sessionStorage.setItem("eset_ack", S.ack ? "1" : "0"); } catch(e) {} render(); };
     const gt = $("gTick"); if (gt) gt.onchange = () => { S.readTick = gt.checked; render(); };
-    app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.l; render(); });
+    app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { if (S.lang === b.dataset.l) return; S.lang = b.dataset.l; try { localStorage.setItem("eset_lang", S.lang); } catch(e) {} const y = window.scrollY; render(); window.scrollTo(0, y); });
     const rend = $("rend");
     if (rend && !S.readDone && "IntersectionObserver" in window) {
       const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { S.readDone = true; io.disconnect(); const y = window.scrollY; render(); window.scrollTo(0, y); } }, { threshold: 1 });
