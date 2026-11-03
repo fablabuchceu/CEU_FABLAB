@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Taller ESET - Reservas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one mobile-first app column (max 460px). Screens: Inicio → Láser → Calendario; the booking form opens in a bottom sheet. */
+:root{
+  --bg:#eef0f3; --app:#f7f8fa; --surface:#ffffff; --ink:#15181e; --muted:#5d6472; --line:#dde0e6;
+  --accent:#e3a300; --accent-ink:#2f2200; --accent-soft:#fff4d1;
+  --free:#1c7a4b; --free-soft:#e2f3e9; --busy:#9aa1ad; --busy-soft:#eceef1; --closed:#b3261e; --closed-soft:#fbe8e6;
+  --sel:#15181e; --sel-ink:#ffffff; --field:#f3f4f7; --scrim:rgba(14,16,20,.45); --shadow:0 10px 30px rgba(20,24,32,.10);
+  --beam:#d92d20; --glass:#ffd96a;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d0f13; --app:#12151a; --surface:#1a1e25; --ink:#eceef2; --muted:#a3aab7; --line:#2c313b;
+  --accent:#f2b51c; --accent-ink:#241a00; --accent-soft:#382d10;
+  --free:#5cc98f; --free-soft:#163224; --busy:#6c7380; --busy-soft:#22262e; --closed:#f08a80; --closed-soft:#3a1d1b;
+  --sel:#f2b51c; --sel-ink:#1a1400; --field:#14171d; --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.4);
+  --beam:#ff6b5e; --glass:#8a6d14; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);min-height:100vh;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:is(button,a,input,textarea):focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.app{max-width:460px;margin:0 auto;min-height:100vh;background:var(--app);display:flex;flex-direction:column;position:relative}
+@media (min-width:520px){.app{margin:16px auto;min-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}}
+.top{display:flex;align-items:center;gap:10px;padding:14px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));min-height:62px}
+.back{all:unset;cursor:pointer;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);flex:none}
+.back svg{width:18px;height:18px}
+.ttl{flex:1;min-width:0}
+.ttl b{display:block;font:700 20px/1.1 var(--f-display);letter-spacing:.01em}
+.ttl span{display:block;font-size:12px;color:var(--muted)}
+.me{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;flex:none;max-width:52%}
+.me i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font:700 14px var(--f-display);flex:none}
+.me button{all:unset;cursor:pointer;font-size:12px;color:var(--muted);padding:0 8px 0 2px;white-space:nowrap}
+.scr{flex:1;padding:4px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));display:grid;gap:16px;align-content:start}
+.demo{font:500 11px/1.4 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:8px 10px}
+/* home */
+.hero{display:grid;gap:6px;padding:4px 2px 0}
+.stripe{height:6px;width:120px;border-radius:3px;background:repeating-linear-gradient(-45deg,var(--accent) 0 9px,var(--ink) 9px 18px)}
+.hero h1{margin:6px 0 0;font:700 32px/1 var(--f-display);text-wrap:balance}
+.hero p{margin:0;color:var(--muted);font-size:15px}
+.hero p b{color:var(--ink);word-break:break-all}
+.tiles{display:grid;gap:14px}
+.tile{all:unset;box-sizing:border-box;cursor:pointer;display:grid;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;position:relative}
+.tile .pic{background:linear-gradient(160deg,var(--accent-soft),var(--field));display:grid;place-items:center;aspect-ratio:16/9;max-width:100%}
+.tile .pic svg{width:72%;height:auto}
+.tile .cap{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.tile .cap div{flex:1;min-width:0}
+.tile .cap b{display:block;font:700 22px/1.05 var(--f-display)}
+.tile .cap span{display:block;font-size:14px;color:var(--muted)}
+.go{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);flex:none}
+.go svg{width:18px;height:18px}
+.tile[aria-disabled="true"]{cursor:default}
+.tile[aria-disabled="true"] .pic{filter:grayscale(1);opacity:.55}
+.tile[aria-disabled="true"] .go{background:var(--busy-soft);color:var(--muted)}
+.soon{position:absolute;top:12px;right:12px;font:600 11px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;background:var(--surface);border:1px solid var(--line);color:var(--muted);padding:6px 8px;border-radius:999px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);padding:0 2px}
+.chk input{margin-top:3px;accent-color:var(--ink)}
+/* laser */
+.banner{border-radius:20px;overflow:hidden;background:linear-gradient(160deg,var(--accent-soft),var(--field));border:1px solid var(--line);display:grid;place-items:center;aspect-ratio:2/1;max-width:100%}
+.banner svg{width:62%;height:auto}
+.actions{display:grid;gap:10px}
+.act{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.act.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.act .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--accent);color:var(--accent-ink);font-size:20px}
+.act div{flex:1;min-width:0}
+.act b{display:block;font:700 19px/1.1 var(--f-display)}
+.act span{display:block;font-size:13px;opacity:.75}
+.act .ch{width:18px;height:18px;opacity:.6;flex:none}
+.doc{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;border:1.5px dashed var(--accent);background:var(--accent-soft);text-decoration:none}
+.doc .ic{width:40px;height:48px;border-radius:6px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font:700 10px var(--f-mono);color:var(--closed);flex:none}
+.doc div{flex:1;min-width:0}
+.doc b{display:block;font:700 17px/1.15 var(--f-display)}
+.doc span{display:block;font-size:13px;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin:0;padding:0 2px}
+.note b{color:var(--ink)}
+/* calendar */
+.mseg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:4px}
+.mseg button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:10px 6px;border-radius:10px;font:600 16px var(--f-display)}
+.mseg button small{display:block;font:400 11px var(--f-body);color:var(--muted)}
+.mseg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.sect{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sect h2{margin:0;font:700 18px var(--f-display)}
+.sect h2 small{font:400 14px var(--f-body);color:var(--muted)}
+.sect span{font-size:12px;color:var(--muted)}
+.strip{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 16px 8px;margin:0 -16px;scrollbar-width:thin}
+.wk{flex:none;align-self:stretch;display:grid;place-items:center;writing-mode:vertical-rl;transform:rotate(180deg);font:500 10px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px}
+.dchip{all:unset;box-sizing:border-box;cursor:pointer;flex:none;width:66px;scroll-snap-align:start;border-radius:14px;border:1px solid var(--line);background:var(--surface);padding:8px 4px;display:grid;justify-items:center;gap:2px}
+.dchip .w{font:500 11px var(--f-mono);text-transform:uppercase;color:var(--muted)}
+.dchip .n{font:700 22px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.dchip .f{font:500 9.5px var(--f-mono);color:var(--free);white-space:nowrap}
+.dchip.full{background:var(--busy-soft);cursor:default} .dchip.full .f{color:var(--busy)}
+.dchip.closed{background:var(--closed-soft);cursor:default} .dchip.closed .f{color:var(--closed)}
+.dchip[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
+.dchip[aria-pressed="true"] .w,.dchip[aria-pressed="true"] .f{color:var(--sel-ink)}
+.hours{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hr{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:12px 4px;border-radius:12px;border:1.5px solid var(--free);color:var(--free);background:var(--surface);font:500 15px var(--f-mono);font-variant-numeric:tabular-nums}
+.hr small{display:block;font:400 11px var(--f-body);color:var(--muted)}
+.hr.busy{border-color:var(--line);color:var(--busy);background:var(--busy-soft);text-decoration:line-through;cursor:not-allowed}
+.hr[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)} .hr[aria-pressed="true"] small{color:var(--sel-ink)}
+.dayh{margin:0;font-size:14px;color:var(--muted)} .dayh b{color:var(--ink)}
+.mini{display:flex;gap:8px;flex-wrap:wrap}
+.mini a{text-decoration:none;font-size:13px;padding:8px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.state{display:grid;gap:10px;justify-items:start;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-size:14px}
+.state p{margin:0}
+.btn2{all:unset;cursor:pointer;font:600 15px var(--f-display);padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--field)}
+.skel{height:56px;border-radius:12px;background:linear-gradient(90deg,var(--field),var(--line),var(--field));background-size:200% 100%}
+@media (prefers-reduced-motion:no-preference){.skel{animation:sh 1.2s linear infinite}@keyframes sh{to{background-position:-200% 0}}}
+.bar{position:sticky;bottom:0;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(transparent,var(--app) 30%);display:grid}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;background:var(--accent);color:var(--accent-ink);font:700 18px var(--f-display);letter-spacing:.02em;padding:15px 18px;border-radius:16px}
+.cta small{display:block;font:500 12px var(--f-body);opacity:.8;letter-spacing:0}
+.cta[aria-disabled="true"]{background:var(--busy-soft);color:var(--muted);cursor:default}
+/* sheet */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;width:100%;max-width:460px;height:92vh;z-index:21;background:var(--surface);border-radius:24px 24px 0 0;display:flex;flex-direction:column;box-shadow:var(--shadow);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
+.shead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.shead div{flex:1;min-width:0}
+.shead b{display:block;font:700 19px/1.1 var(--f-display)}
+.shead span{display:block;font-size:13px;color:var(--muted)}
+.x{all:unset;cursor:pointer;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--field);font-size:18px;flex:none}
+.sheet iframe{flex:1;width:100%;border:0;background:transparent}
+.sfoot{padding:8px 16px 10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.sfoot a{color:var(--ink)}
+/* rules document */
+.rules{background:var(--surface);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;min-width:0}
+.rhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rhead b{flex:1;min-width:160px;font:700 18px/1.15 var(--f-display)}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--field)}
+.lang button{all:unset;cursor:pointer;font:600 12px var(--f-mono);padding:5px 10px;border-radius:999px;color:var(--muted)}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.rbody{padding:4px 16px 16px;font-size:14.5px;line-height:1.5}
+.rbody h3{font:700 19px/1.2 var(--f-display);margin:12px 0 6px;text-wrap:balance}
+.rbody ul{padding-left:18px;margin:6px 0}
+.rbody li{margin:4px 0}
+.rbody img{display:block;max-width:100%;height:auto;border-radius:8px;margin:8px 0;border:1px solid var(--line)}
+.rbody .warn{background:var(--closed-soft);border-radius:10px;padding:10px 12px;margin:12px 0}
+.rbody .key{background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:12px 0;font-weight:600}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:4px;border:1px solid var(--line)}
+.rend{font:500 12px var(--f-mono);color:var(--free);padding:8px 0 0}
+.rfoot{padding:10px 14px;border-top:1px solid var(--line);font-size:13px;display:flex;gap:12px;flex-wrap:wrap}
+.gate{display:grid;gap:10px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.gate .chk{color:var(--ink)}
+.ackbox{padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-size:14px}
+.split .bar{padding-left:0;padding-right:0}
+.chk input:disabled+span{opacity:.5}
+/* desktop: calendar beside the document */
+@media (min-width:1000px){
+  .app.wide{max-width:1180px}
+  .split{display:grid;grid-template-columns:460px minmax(0,1fr);gap:24px;align-items:start}
+  .split .rules{position:sticky;top:16px;max-height:calc(100vh - 140px)}
+  .split .rules .rbody{overflow-y:auto}
+  .split .bar{grid-column:1}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app" aria-live="polite"></div>
+
+<!-- Generic illustrations (original) -->
+<template id="svgLaser">
+  <svg viewBox="0 0 320 180" role="img" aria-label="Cortadora láser - Laser cutter">
+    <rect x="34" y="70" width="252" height="92" rx="10" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3"/>
+    <path d="M44 70 L64 26 H256 L276 70 Z" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M74 64 L88 34 H232 L246 64 Z" style="fill:var(--glass)" opacity=".75"/>
+    <rect x="34" y="70" width="252" height="10" style="fill:var(--ink)"/>
+    <rect x="232" y="92" width="38" height="52" rx="5" style="fill:var(--field);stroke:var(--ink)" stroke-width="2"/>
+    <circle cx="251" cy="106" r="5" style="fill:var(--accent)"/>
+    <rect x="240" y="120" width="22" height="4" rx="2" style="fill:var(--ink)"/>
+    <rect x="240" y="129" width="22" height="4" rx="2" style="fill:var(--ink)" opacity=".5"/>
+    <rect x="52" y="94" width="164" height="50" rx="4" style="fill:var(--field);stroke:var(--line)" stroke-width="2"/>
+    <rect x="120" y="40" width="26" height="12" rx="2" style="fill:var(--ink)"/>
+    <line x1="133" y1="52" x2="133" y2="118" style="stroke:var(--beam)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="133" cy="120" r="5" style="fill:var(--beam)"/>
+    <path d="M80 128 H120 M146 128 H190" style="stroke:var(--muted)" stroke-width="2" stroke-dasharray="4 4"/>
+    <rect x="40" y="162" width="20" height="8" rx="2" style="fill:var(--ink)"/>
+    <rect x="260" y="162" width="20" height="8" rx="2" style="fill:var(--ink)"/>
+  </svg>
+</template>
+<template id="svgPrinter">
+  <svg viewBox="0 0 320 180" role="img" aria-label="Impresora 3D - 3D printer">
+    <rect x="70" y="16" width="14" height="150" rx="3" style="fill:var(--ink)"/>
+    <rect x="236" y="16" width="14" height="150" rx="3" style="fill:var(--ink)"/>
+    <rect x="62" y="12" width="196" height="12" rx="4" style="fill:var(--ink)"/>
+    <rect x="62" y="160" width="196" height="12" rx="4" style="fill:var(--ink)"/>
+    <rect x="84" y="62" width="152" height="8" rx="3" style="fill:var(--muted)"/>
+    <rect x="146" y="52" width="30" height="28" rx="4" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3"/>
+    <path d="M156 80 H166 L161 90 Z" style="fill:var(--ink)"/>
+    <rect x="100" y="136" width="120" height="8" rx="2" style="fill:var(--surface);stroke:var(--ink)" stroke-width="2.5"/>
+    <path d="M136 136 L142 104 H180 L186 136 Z" style="fill:var(--accent)"/>
+    <circle cx="282" cy="56" r="22" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3"/>
+    <circle cx="282" cy="56" r="7" style="fill:var(--accent)"/>
+    <path d="M262 64 C230 70 200 50 176 58" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>
+  </svg>
+</template>
+
+<script>
+/* =====================================================================
+   CONFIG — the only part to edit. See SETUP.md.
+   Leave TOKEN empty to run in demo mode with example hours.
+   The token must be READ-ONLY and only for the public availability base.
+   Never put a token for the main base here.
+   ===================================================================== */
+const CONFIG = {
+  PUBLIC_BASE_ID: "appyWBQIm4FMyO2Pj", // "Public View Calendar" base (only synced hours, no student data)
+  TABLE: "tbl0ZTV8k50aDi9QE",          // synced table "Public slots" (id, so renaming it doesn't break the page)
+  VIEW: "",                           // optional view name in that table
+  TOKEN: "pat4YBsSV9puFpi99.015158273bbf078de7917558e0579c58bd01b19047638cac1cf92de86ea1a26b",                          // personal access token: data.records:read, that base only
+  FIELDS: { label: "Slot Label", start: "Start", machine: "Machine", available: "Available" },
+
+  // Solicitar cita form (main base). Prefill field names checked against the real forms on 2026-11-03.
+  FORM_EMBED: "https://airtable.com/embed/appeQ6gkuiJAq7wiT/pagLrDFHZOZnjGE8w/form",
+  FORM_OPEN:  "https://airtable.com/appeQ6gkuiJAq7wiT/pagLrDFHZOZnjGE8w/form",
+  PREFILL: { machine: "Machine", slot: "Slot", email: "Entered Email", pin: "Entered PIN", rules: "Rules Read" },
+
+  CREATE_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagKd1xxwNKHBWMYC/form",
+  FORGOT_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagfix2aQ1lqOqEp9/form",
+  SECURE_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pageRHfHjstyRnFak/form",
+  CANCEL_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagPvXUS8hYoHCP4J/form",
+  HOURS_URL:  "https://airtable.com/appeQ6gkuiJAq7wiT/pagKr3hOks4XqRsmD/form",
+  CALENDAR_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/shrvGOhBZWWmbCsk3",
+  RULES_PDF: "reglamiento.pdf",            // copy of the rules document, in the repository
+  RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
+
+  MACHINES: [ { id: "Fusion Edge 60W", short: "Fusion Edge", w: "60 W" }, { id: "Helix 50W", short: "Helix", w: "50 W" } ],
+  DAYS_AHEAD: 30,
+  TZ: "Europe/Madrid",
+  DEMO_HOURS: { 1:[9,10,11,12,13,14,15,16,17,18,19], 2:[9,10,11,12,13,14,15,16,17,18,19], 3:[9,10,11,12,13,14,15,16,17,18], 4:[9,10,11,12,13,14,15,16,17,18,19], 5:[9,10,11,12,13,14,15,16,17,18] }
+};
+/* ===================================================================== */
+
+(function(){
+  "use strict";
+  const DEMO = !CONFIG.TOKEN || !CONFIG.PUBLIC_BASE_ID;
+  const app = document.getElementById("app");
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const enc = encodeURIComponent;
+  const pad = n => String(n).padStart(2, "0");
+  const I = {
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+    next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>'
+  };
+  const svg = id => document.getElementById(id).innerHTML;
+
+  // ---- Madrid-time helpers ----
+  const partsFmt = new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" });
+  function mad(d) { const o = {}; for (const p of partsFmt.formatToParts(d)) o[p.type] = p.value; return { y:+o.year, m:+o.month, d:+o.day, h:+o.hour, min:+o.minute, key: o.year + "-" + o.month + "-" + o.day }; }
+  const fES = new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" });
+  const fEN = new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.TZ, weekday: "long", day: "numeric", month: "long" });
+  const fShort = new Intl.DateTimeFormat("es-ES", { timeZone: CONFIG.TZ, day: "numeric", month: "short" });
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const WD = ["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
+  const noonUTC = key => { const [y,m,d] = key.split("-").map(Number); return new Date(Date.UTC(y, m-1, d, 12)); };
+
+  // ---- Sign-in (from personal link #e=…&p=…&c=…) ----
+  const store = { get(k){ try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch(e){ return null; } },
+                  set(k,v,remember){ try { sessionStorage.setItem(k,v); if (remember) localStorage.setItem(k,v); else localStorage.removeItem(k); } catch(e){} },
+                  clear(k){ try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch(e){} } };
+  let user = null;
+  (function readLink(){
+    const h = new URLSearchParams(location.hash.slice(1));
+    const e = (h.get("e") || "").trim(), p = (h.get("p") || "").trim(), c = (h.get("c") || "").trim();
+    if (e && /^\d{4}$/.test(p)) {
+      user = { e, p, c };
+      store.set("eset_user", JSON.stringify(user), false);
+      try { history.replaceState(null, "", location.pathname + location.search); } catch(err) {}
+    } else {
+      try { const s = JSON.parse(store.get("eset_user") || "null"); if (s && s.e && s.p) user = s; } catch(err) {}
+    }
+  })();
+  const remembered = () => { try { return !!localStorage.getItem("eset_user"); } catch(e){ return false; } };
+
+
+  // ---- Rules document (same content as reglamiento.pdf) ----
+  const RULES = {
+    es: `<h3>Requisitos obligatorios para el corte láser CO2 en el taller de prototipos ESET</h3>
+<ul>
+<li><b>Información obligatoria:</b> indicar asignatura y profesor/a responsable del proyecto para cortar/grabar.</li>
+<li><b>Formato de archivo:</b> envía archivos vectoriales en formato .DXF - AutoCAD 2019.</li>
+<li><b>Área máxima de trabajo (tamaño de plancha):</b> el diseño no puede exceder el volumen físico de las máquinas (X × Y):
+<ul><li>Epilog Helix: 600 × 400 mm</li><li>Epilog Fusion Edge: 600 × 600 mm</li></ul></li>
+<li><b>Espesores máximos (Z):</b> grosor máximo del material a cortar:
+<ul><li>Madera maciza: 4 mm (balsa, pino, abedul)</li><li>Contrachapado: 5 mm (chopo)</li><li>Capa de madera (veneer): 1,5 mm</li><li>Cartón y papel: 5 mm (cartón gris, cartulina, papel Kraft…)</li><li>Corcho: 5 mm</li><li>Cuero curtido vegetal: 3 mm</li><li>Fieltro de lana y tejidos naturales: 4 mm</li><li>Metacrilato colado y plexiglás: 6 mm</li><li>Acetato de celulosa: 1 mm</li></ul></li>
+</ul>
+<img src="materiales-es.jpg" alt="Tabla de materiales que sí se cortan y que no se cortan. El PVC no entra en el láser nunca." loading="lazy">
+<ul>
+<li><b>Escala de trabajo:</b> verifica que las unidades de tu archivo exportado estén configuradas estrictamente en milímetros (mm).</li>
+<li><b>Limpieza de geometría (líneas duplicadas):</b> es obligatorio revisar y eliminar las líneas superpuestas o duplicadas antes de enviar el archivo, para evitar quemaduras excesivas en el material y pasadas dobles del láser (peor acabado, piezas fallidas y más tiempo de corte):
+<ul><li>En AutoCAD, utiliza el comando OVERKILL (o ELIMINARSOBRANTE) para limpiar y fusionar líneas superpuestas automáticamente.</li><li>Revisa las polilíneas; si es necesario, córtalas o explótalas para que los contornos sean líneas continuas y limpias, sin tramos abiertos ni intersecciones incorrectas.</li></ul></li>
+<li><b>Unión de piezas pequeñas:</b> si el diseño tiene piezas muy pequeñas (se pueden caer por la rejilla de la máquina, o soltarse y cortarse), se recomienda unirlas con unas pestañas (dividir la línea de corte dejando 1 mm sin cortar).<img src="pestanas-es.png" alt="Ejemplo de pestaña: la línea de corte se interrumpe y deja 1 mm sin cortar." loading="lazy" style="max-width:220px"></li>
+<li><b>Configuración de capas y colores:</b> los elementos vectoriales deben organizarse en capas independientes con estos colores (grosor de línea mínimo o 0,00 mm):
+<ul><li><span class="sw" style="background:#00ffff"></span><b>Azul cian RGB (0,255,255):</b> grabado vectorial (marcas, textos…).</li><li><span class="sw" style="background:#ff0000"></span><b>Rojo RGB (255,0,0):</b> corte interior (se ejecuta siempre primero para evitar que la pieza se mueva al liberarse).</li><li><span class="sw" style="background:#00ff00"></span><b>Verde RGB (0,255,0):</b> corte exterior (se ejecuta en último lugar).</li></ul></li>
+</ul>
+<p class="warn"><b>Aviso:</b> si el archivo no cumple con la totalidad de estos requisitos técnicos cuando lo revisemos en el taller, será rechazado y no se cortará/grabará la pieza.</p>
+<p class="key">Reservar a través del QR; los archivos se revisan en el momento de la reserva. Los alumnos deben estar presentes mientras se hace su trabajo; si el alumno no está presente, no se realizará el trabajo. El alumno debe poner y quitar el material de la máquina.</p>`,
+    en: `<h3>Mandatory requirements for CO2 laser cutting at the ESET prototype workshop</h3>
+<ul>
+<li><b>Required information:</b> specify the course and the professor in charge of the project to be cut or engraved.</li>
+<li><b>File format:</b> submit vector files in .DXF format (AutoCAD 2019 compatible).</li>
+<li><b>Maximum working area (sheet size):</b> the design must not exceed the physical dimensions of the machines (X × Y):
+<ul><li>Epilog Helix: 600 × 400 mm</li><li>Epilog Fusion Edge: 600 × 600 mm</li></ul></li>
+<li><b>Maximum thicknesses (Z):</b> maximum thickness of the material to be cut:
+<ul><li>Solid wood: 4 mm (balsa, pine, birch)</li><li>Plywood: 5 mm (poplar)</li><li>Wood veneer: 1.5 mm</li><li>Cardboard and paper: 5 mm (grey board, cardstock, Kraft paper, etc.)</li><li>Cork: 5 mm</li><li>Vegetable-tanned leather: 3 mm</li><li>Wool felt and natural fabrics: 4 mm</li><li>Cast acrylic and Plexiglas: 6 mm</li><li>Cellulose acetate: 1 mm</li></ul></li>
+</ul>
+<img src="materials-en.jpg" alt="Table of materials that can and cannot be cut. PVC never goes in the laser." loading="lazy">
+<ul>
+<li><b>Working scale:</b> make sure the units of your exported file are strictly set to millimetres (mm).</li>
+<li><b>Geometry cleanup (duplicate lines):</b> you must review and remove overlapping or duplicate lines before submitting the file, to prevent excessive burning and double laser passes (poorer finish, failed parts and more cutting time):
+<ul><li>In AutoCAD, use the OVERKILL command to clean and merge overlapping lines automatically.</li><li>Check polylines; if needed, trim or explode them so contours are continuous, clean lines, without open segments or incorrect intersections.</li></ul></li>
+<li><b>Small parts connection:</b> if the design has very small parts (they may fall through the honeycomb bed, or come loose and be cut separately), connect them with tabs by interrupting the cut line and leaving 1 mm uncut.<img src="tabs-en.png" alt="Tab example: the cut line is interrupted, leaving 1 mm uncut." loading="lazy" style="max-width:220px"></li>
+<li><b>Layer and colour configuration:</b> vector elements must be organised into separate layers with these colours (minimum line weight or 0.00 mm):
+<ul><li><span class="sw" style="background:#00ffff"></span><b>Cyan blue RGB (0,255,255):</b> vector engraving (marks, text…).</li><li><span class="sw" style="background:#ff0000"></span><b>Red RGB (255,0,0):</b> internal cutting (always runs first so the part doesn't move when freed).</li><li><span class="sw" style="background:#00ff00"></span><b>Green RGB (0,255,0):</b> external cutting (runs last).</li></ul></li>
+</ul>
+<p class="warn"><b>Notice:</b> if the file does not meet all of these technical requirements when we review it in the workshop, it will be rejected and the part will not be cut or engraved.</p>
+<p class="key">Book via the QR code; files are reviewed at the time of booking. Students must be present while their work is being done; if the student is not present, the job will not be carried out. The student loads and unloads the material from the machine.</p>`
+  };
+  function rulesPanel(withEnd) {
+    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 Reglamiento y uso - Rules and usage</b>
+      <div class="lang" role="group" aria-label="Idioma - Language"><button data-l="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" aria-pressed="${S.lang === "en"}">EN</button></div></div>
+      <div class="rbody" id="rbody" lang="${S.lang}">${RULES[S.lang]}${withEnd ? `<div class="rend" id="rend">${S.readDone ? "✓ Has llegado al final · You reached the end" : "↓ Lee hasta el final · Read to the end"}</div>` : ""}</div>
+      <div class="rfoot"><a href="${esc(CONFIG.RULES_PDF)}" target="_blank" rel="noopener">⬇️ PDF</a></div></section>`;
+  }
+
+  // ---- State ----
+  const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: false, readTick: false, ack: false };
+  try { S.ack = sessionStorage.getItem("eset_ack") === "1"; } catch(e) {}
+
+  // ---- Data ----
+  function demoRecords() {
+    const out = [], now = new Date();
+    const h = s => { let x = 2166136261; for (const c of s) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); } return (x >>> 0) / 4294967295; };
+    const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    for (let i = 0; i <= CONFIG.DAYS_AHEAD; i++) {
+      const d = new Date(now.getTime() + i * 86400000), m = mad(d), wd = noonUTC(m.key).getUTCDay();
+      const hours = CONFIG.DEMO_HOURS[wd]; if (!hours) continue;
+      for (const mc of CONFIG.MACHINES) for (const hr of hours) {
+        const start = new Date(Date.UTC(m.y, m.m-1, m.d, hr - 1)); // approx. Madrid CET for demo
+        if (start - now < 5 * 60000) continue;
+        out.push({ label: m.d + " " + MON[m.m-1] + " · " + pad(hr) + ":00–" + pad(hr+1) + ":00 · " + mc.id, start, machine: mc.id,
+                   available: h(m.key + mc.id + hr) > (i < 3 ? 0.55 : i < 8 ? 0.35 : 0.15) });
+      }
+    }
+    return out;
+  }
+  function norm(v) { if (v == null) return ""; if (Array.isArray(v)) return norm(v[0]); if (typeof v === "object") return v.name || v.id || ""; return String(v); }
+  async function loadLive() {
+    const F = CONFIG.FIELDS, out = []; let offset = "";
+    for (let guard = 0; guard < 30; guard++) {
+      const q = new URLSearchParams({ pageSize: "100" });
+      [F.label, F.start, F.machine, F.available].forEach(f => q.append("fields[]", f));
+      if (CONFIG.VIEW) q.set("view", CONFIG.VIEW);
+      if (offset) q.set("offset", offset);
+      const r = await fetch("https://api.airtable.com/v0/" + enc(CONFIG.PUBLIC_BASE_ID) + "/" + enc(CONFIG.TABLE) + "?" + q, { headers: { Authorization: "Bearer " + CONFIG.TOKEN } });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      for (const rec of j.records || []) {
+        const f = rec.fields || {}, start = f[F.start] ? new Date(f[F.start]) : null;
+        if (!start || isNaN(start)) continue;
+        const av = f[F.available];
+        out.push({ label: norm(f[F.label]), start, machine: norm(f[F.machine]), available: av === true || av === 1 || av === "1" });
+      }
+      if (!j.offset) break; offset = j.offset;
+    }
+    return out;
+  }
+  async function load() {
+    S.loading = true; S.error = null; render();
+    try {
+      const all = DEMO ? demoRecords() : await loadLive();
+      const now = Date.now(), max = now + (CONFIG.DAYS_AHEAD + 1) * 86400000;
+      S.records = all.filter(r => r.start.getTime() > now && r.start.getTime() < max).sort((a, b) => a.start - b.start);
+    } catch (e) { S.error = String(e.message || e); S.records = null; }
+    S.loading = false;
+    if (!S.day || dstat(S.day).c !== "av") S.day = firstFree();
+    render();
+  }
+
+  // ---- Derived ----
+  const mine = () => (S.records || []).filter(r => r.machine === S.machine);
+  function dayKeys() { const set = new Set(); (S.records || []).forEach(r => set.add(mad(r.start).key)); return [...set].sort(); }
+  const slotsFor = key => mine().filter(r => mad(r.start).key === key);
+  function dstat(key) { const s = slotsFor(key); if (!s.length) return { c: "closed", t: "Cerrado" }; const f = s.filter(r => r.available).length; return f ? { c: "av", t: f + " libres", n: f } : { c: "full", t: "Completo" }; }
+  function firstFree() { return dayKeys().find(k => dstat(k).c === "av") || null; }
+
+  // ---- Links ----
+  const who = () => user ? "prefill_" + enc(CONFIG.PREFILL.email).replace(/%20/g,"+") + "=" + enc(user.e) + "&hide_" + enc(CONFIG.PREFILL.email).replace(/%20/g,"+") + "=true&prefill_" + enc(CONFIG.PREFILL.pin).replace(/%20/g,"+") + "=" + enc(user.p) + "&hide_" + enc(CONFIG.PREFILL.pin).replace(/%20/g,"+") + "=true" : "";
+  const pf = (k, v) => "prefill_" + enc(k).replace(/%20/g,"+") + "=" + enc(v) + "&hide_" + enc(k).replace(/%20/g,"+") + "=true";
+  function bookQuery() { const p = [pf(CONFIG.PREFILL.machine, S.machine), pf(CONFIG.PREFILL.slot, S.slot.label)]; if (user) p.push(who()); return p.join("&"); }
+  const cancelLink = () => user && user.c ? CONFIG.CANCEL_URL + "?" + who() + "&prefill_Entered+Code=" + enc(user.c) + "&hide_Entered+Code=true" : null;
+  const hoursLink = () => user ? CONFIG.HOURS_URL + "?" + who() : CONFIG.HOURS_URL;
+
+  // ---- Views ----
+  function topbar(title, sub, back) {
+    const me = user ? `<div class="me"><i aria-hidden="true">${esc(user.e[0].toUpperCase())}</i><button id="out">Salir - Sign out</button></div>` : "";
+    return `<div class="top">${back ? `<button class="back" id="back" aria-label="Atrás - Back">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${me}</div>`;
+  }
+  const demoNote = () => DEMO ? `<div class="demo">Modo demostración: horas de ejemplo · Demo mode: example hours</div>` : "";
+  const docCard = () => `<a class="doc" href="${esc(CONFIG.RULES_PDF)}" target="_blank" rel="noopener"><span class="ic">PDF</span><div><b>Reglamiento y uso - Rules and usage</b><span>Léelo antes de reservar · Read it before booking</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
+
+  function vHome() {
+    return topbar("Taller ESET", "Fab Lab 2026-2027", false) + `<div class="scr">${demoNote()}
+      <div class="hero"><div class="stripe" aria-hidden="true"></div>
+        <h1>¿Qué máquina quieres usar?</h1><p>Which machine do you want to use?</p>
+        ${user ? `<p>Has entrado como <b>${esc(user.e)}</b> · Signed in</p>` : ""}</div>
+      <div class="tiles">
+        <button class="tile" id="tLaser"><div class="pic">${svg("svgLaser")}</div><div class="cap"><div><b>Corte láser - Laser</b><span>${CONFIG.MACHINES.map(m => esc(m.id)).join(" · ")}</span></div><span class="go">${I.next}</span></div></button>
+        <div class="tile" aria-disabled="true"><span class="soon">Próximamente - Soon</span><div class="pic">${svg("svgPrinter")}</div><div class="cap"><div><b>Impresión 3D - 3D printing</b><span>Disponible pronto · Available soon</span></div><span class="go">${I.next}</span></div></div>
+      </div>
+      ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span><b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.<br>Remember me on this device. Don't tick it on a workshop computer.</span></label>` : ""}
+    </div>`;
+  }
+  function vLaser() {
+    return topbar("Corte láser - Laser", "Cortadoras láser CO₂", true) + `<div class="scr">
+      <div class="banner">${svg("svgLaser")}</div>
+      <div class="actions">
+        <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>Solicitar cita - Book</b><span>Ver horas libres y reservar · See free hours and book</span></div><span class="ch">${I.next}</span></button>
+        <button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>Crear cuenta - Create account</b><span>Primera vez: lee el reglamento · First time: read the rules</span></div><span class="ch">${I.next}</span></button>
+      </div>
+      ${docCard()}
+      <p class="note"><b>ES 🔗 ¿Ya tienes cuenta? Abre el enlace personal de tu correo y entras directamente.</b><br>EN Already have an account? Open the personal link in your email to go straight in.</p>
+    </div>`;
+  }
+  function vGate() {
+    const ok = S.readDone && S.readTick;
+    return topbar("Crear cuenta - Create account", "Paso 1: reglamento · Step 1: rules", true) + `<div class="scr">
+      <p class="note"><b>ES 📄 Lee el reglamento hasta el final. Después marca la casilla y crea tu cuenta.</b><br>EN Read the rules to the end. Then tick the box and create your account.</p>
+      ${rulesPanel(true)}
+      <div class="gate">
+        <label class="chk" for="gTick"><input type="checkbox" id="gTick" ${S.readTick ? "checked" : ""} ${S.readDone ? "" : "disabled"}><span><b>He leído el reglamento y lo cumpliré.</b><br>I have read the rules and will follow them.</span></label>
+        <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>Crear cuenta - Create account<small>${ok ? "Se abre el formulario · Opens the form" : S.readDone ? "Marca la casilla · Tick the box" : "Primero lee hasta el final · Read to the end first"}</small></button>
+      </div></div>`;
+  }
+  function vCal() {
+    let body;
+    if (S.loading && !S.records) {
+      body = `<div class="skel"></div><div class="skel"></div><div class="skel"></div>`;
+    } else if (S.error) {
+      body = `<div class="state"><p><b>No se pueden cargar las horas ahora.</b><br>Couldn't load the hours right now.</p>
+        <button class="btn2" id="retry">Reintentar - Try again</button>
+        <p class="note">También puedes reservar en el formulario de siempre · You can also book in the usual form: <a href="${esc(CONFIG.FORM_OPEN)}" target="_blank" rel="noopener">Solicitar cita - Book</a></p></div>`;
+    } else {
+      const keys = dayKeys(); let strip = "", lastWk = null;
+      keys.forEach(k => {
+        const d = noonUTC(k), wd = d.getUTCDay(), mon = new Date(d.getTime() - ((wd + 6) % 7) * 86400000), wk = mon.toISOString().slice(0,10);
+        if (wk !== lastWk) { strip += `<span class="wk" aria-hidden="true">${esc(fShort.format(mon))}</span>`; lastWk = wk; }
+        const st = dstat(k), on = S.day === k;
+        strip += `<button class="dchip ${st.c}" data-k="${k}" aria-pressed="${on}" ${st.c !== "av" ? "disabled" : ""} aria-label="${esc(fES.format(d))}, ${esc(st.t)}"><span class="w">${WD[wd]}</span><span class="n">${+k.slice(8)}</span><span class="f">${st.c === "av" ? st.n + " libres" : st.t}</span></button>`;
+      });
+      const sl = S.day ? slotsFor(S.day) : [];
+      const hrs = sl.map((r, i) => { const m = mad(r.start), on = S.slot && S.slot.label === r.label;
+        return r.available ? `<button class="hr" data-i="${i}" aria-pressed="${!!on}">${pad(m.h)}:${pad(m.min)}<small>Libre - Free</small></button>`
+                           : `<button class="hr busy" disabled>${pad(m.h)}:${pad(m.min)}<small>Ocupado - Taken</small></button>`; }).join("");
+      const cl = cancelLink();
+      body = `${keys.length ? "" : `<div class="state"><p><b>No hay horas en los próximos ${CONFIG.DAYS_AHEAD} días.</b><br>No hours in the next ${CONFIG.DAYS_AHEAD} days.</p></div>`}
+        <div class="sect"><h2>Día <small>- Day</small></h2><span>Desliza → · Swipe</span></div>
+        <div class="strip" id="strip">${strip}</div>
+        <div class="sect"><h2>Hora <small>- Hour</small></h2><span>1 h</span></div>
+        ${S.day ? `<p class="dayh"><b>${esc(cap(fES.format(noonUTC(S.day))))}</b> · ${esc(fEN.format(noonUTC(S.day)))}</p>` : ""}
+        <div class="hours">${hrs || '<p class="note" style="grid-column:1/-1">No hay horas libres. Elige otro día · No free hours. Pick another day.</p>'}</div>
+        <p class="note"><b>ES Máx. 2 h al día y 3 h a la semana. Después confirma la cita desde el correo.</b><br>EN Max 2 h a day and 3 h a week. Then confirm the booking from the email.</p>
+        <div class="mini">${cl ? `<a href="${esc(cl)}" target="_blank" rel="noopener">❌ Cancelar cita - Cancel</a>` : ""}<a href="${esc(hoursLink())}" target="_blank" rel="noopener">⏱️ Mis horas - My hours</a><a href="${esc(CONFIG.SECURE_URL)}" target="_blank" rel="noopener">🛡️ Proteger mi cuenta - Secure account</a></div>`;
+    }
+    const sel = S.slot ? mad(S.slot.start) : null;
+    const ready = S.slot && S.ack;
+    return topbar("Solicitar cita - Book", `${CONFIG.DAYS_AHEAD} días · ${CONFIG.DAYS_AHEAD} days`, true) + `<div class="scr split" style="padding-bottom:8px"><div style="display:grid;gap:16px;min-width:0">${demoNote()}
+      <div class="mseg" role="group" aria-label="Elige una máquina - Choose a machine">${CONFIG.MACHINES.map(m => `<button data-m="${esc(m.id)}" aria-pressed="${S.machine === m.id}">${esc(m.short)}<small>${esc(m.w)}</small></button>`).join("")}</div>
+      ${body}
+      <label class="chk ackbox" for="ack"><input type="checkbox" id="ack" ${S.ack ? "checked" : ""}><span><b>He leído el reglamento y mi archivo lo cumple.</b> (Está al lado o al final de la página.)<br>I have read the rules and my file meets them. (It's beside or at the bottom of the page.)</span></label>
+      <div class="bar"><button class="cta" id="cta" ${ready ? "" : 'aria-disabled="true"'}>${S.slot ? `Reservar ${pad(sel.h)}:${pad(sel.min)}<small>${S.ack ? esc(S.machine) + " · " + esc(fES.format(S.slot.start)) : "Marca la casilla del reglamento · Tick the rules box"}</small>` : `Elige una hora<small>Choose an hour</small>`}</button></div>
+      </div>${rulesPanel(false)}</div>`;
+  }
+  function vSheet() {
+    if (S.sheet === "create") {
+      const q = pf(CONFIG.PREFILL.rules, "true"), embed = CONFIG.CREATE_URL.replace("airtable.com/", "airtable.com/embed/");
+      const frame = DEMO ? `<div class="scr"><div class="state"><p><b>Modo demostración.</b> Aquí se abre el formulario Crear cuenta con la casilla del reglamento ya marcada.<br>Demo mode. The Crear cuenta form opens here.</p></div></div>` : `<iframe title="Crear cuenta - Create account" src="${esc(embed + "?" + q)}"></iframe>`;
+      return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+        <div class="shead"><div><b id="shT">Crear cuenta - Create account</b><span>Confirma desde tu correo en 1 hora · Confirm from your email within 1 hour</span></div><button class="x" id="close" aria-label="Cerrar - Close">✕</button></div>
+        ${frame}<div class="sfoot">¿No carga? · Not loading? <a href="${esc(CONFIG.CREATE_URL + "?" + q)}" target="_blank" rel="noopener">Abrir el formulario - Open the form</a></div></div>`;
+    }
+    if (!S.sheet || !S.slot) return "";
+    const q = bookQuery(), sel = mad(S.slot.start);
+    const frame = DEMO ? `<div class="scr"><div class="state"><p><b>Modo demostración.</b> Aquí se abre el formulario Solicitar cita con la máquina y la hora ya puestas${user ? ", y tu email y PIN" : ""}.<br>Demo mode. The Solicitar cita form opens here, prefilled.</p></div></div>`
+                       : `<iframe title="Solicitar cita - Book" src="${esc(CONFIG.FORM_EMBED + "?" + q)}" loading="eager"></iframe>`;
+    return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+      <div class="shead"><div><b id="shT">${esc(S.machine)} · ${pad(sel.h)}:${pad(sel.min)}</b><span>${esc(fES.format(S.slot.start))}</span></div><button class="x" id="close" aria-label="Cerrar - Close">✕</button></div>
+      ${frame}
+      <div class="sfoot">¿No carga? · Not loading? <a href="${esc(CONFIG.FORM_OPEN + "?" + q)}" target="_blank" rel="noopener">Abrir el formulario - Open the form</a></div></div>`;
+  }
+
+  // ---- Render + events ----
+  function render() {
+    const sl = $("strip") ? $("strip").scrollLeft : 0;
+    app.innerHTML = (S.screen === "home" ? vHome() : S.screen === "laser" ? vLaser() : S.screen === "gate" ? vGate() : vCal()) + vSheet();
+    app.classList.toggle("wide", S.screen === "cal");
+    if ($("strip")) $("strip").scrollLeft = sl;
+    const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+    on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : S.screen === "gate" ? "laser" : "home"; render(); window.scrollTo(0, 0); });
+    on("out", () => { store.clear("eset_user"); user = null; S.sheet = false; S.screen = "home"; render(); });
+    on("tLaser", () => { S.screen = user ? "cal" : "laser"; if (S.screen === "cal" && !S.records && !S.loading) load(); else render(); });
+    on("aBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); });
+    on("retry", load);
+    on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
+    on("aCreate", () => { S.screen = "gate"; render(); window.scrollTo(0, 0); });
+    on("gGo", () => { if (!(S.readDone && S.readTick)) return; S.sheet = "create"; render(); });
+    const ack = $("ack"); if (ack) ack.onchange = () => { S.ack = ack.checked; try { sessionStorage.setItem("eset_ack", S.ack ? "1" : "0"); } catch(e) {} render(); };
+    const gt = $("gTick"); if (gt) gt.onchange = () => { S.readTick = gt.checked; render(); };
+    app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.l; render(); });
+    const rend = $("rend");
+    if (rend && !S.readDone && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { S.readDone = true; io.disconnect(); const y = window.scrollY; render(); window.scrollTo(0, y); } }, { threshold: 1 });
+      io.observe(rend);
+    } else if (rend && !S.readDone) { S.readDone = true; }
+    on("scrim", () => { S.sheet = false; render(); });
+    on("close", () => { const was = S.sheet; S.sheet = false; if (was === "book") { S.slot = null; load(); } else render(); });
+    const rem = $("rem"); if (rem) rem.onchange = () => store.set("eset_user", JSON.stringify(user), rem.checked);
+    app.querySelectorAll(".mseg button").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
+    app.querySelectorAll(".dchip:not([disabled])").forEach(b => b.onclick = () => { S.day = b.dataset.k; S.slot = null; render(); });
+    app.querySelectorAll(".hr:not(.busy)").forEach(b => b.onclick = () => { S.slot = slotsFor(S.day)[+b.dataset.i]; render(); });
+    document.onkeydown = e => { if (e.key === "Escape" && S.sheet) { S.sheet = false; render(); } };
+  }
+  render();
+})();
+</script>
+</body>
+</html>
