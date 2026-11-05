@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Guardar mis datos - Taller ESET</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app" aria-live="polite"></div>
+<script>
+/* =====================================================================
+   "Guardar mis datos - Save my details": the site-wide sign-in page.
+   It does NOT check the email or PIN (there is no server). It only saves them
+   on this device so every page of the site (laser now, 3D printing later)
+   can fill them into the Airtable forms. Airtable checks them when a form is sent.
+   Same storage keys as index.html: eset_user, eset_lang.
+   ===================================================================== */
+const CONFIG = {
+  HOME: "index.html",
+  FORGOT_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagfix2aQ1lqOqEp9/form",
+  CREATE_PAGE: "index.html",                  // Crear cuenta lives on the laser screen for now
+  EMAIL_RE: /^[^@\s]+@(alumnos\.)?uchceu\.es$/
+};
+(function(){
+  "use strict";
+  const app = document.getElementById("app"), $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const back = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  const store = { get(k){ try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch(e){ return null; } },
+                  set(k,v,remember){ try { sessionStorage.setItem(k,v); if (remember) localStorage.setItem(k,v); else localStorage.removeItem(k); } catch(e){} },
+                  clear(k){ try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch(e){} } };
+  let user = null; try { const s = JSON.parse(store.get("eset_user") || "null"); if (s && s.e && s.p) user = s; } catch(e) {}
+  const S = { lang: "es", err: "", email: "" };
+  try { const l = localStorage.getItem("eset_lang"); S.lang = (l === "es" || l === "en") ? l : (/^en(-|$)/i.test(navigator.language || "") ? "en" : "es"); } catch(e) {}
+  const L = (es, en) => S.lang === "en" ? en : es;
+
+  function top() {
+    return `<div class="top"><a class="back" href="${CONFIG.HOME}" aria-label="${L("Volver al inicio", "Back to home")}">${back}</a>
+      <div class="ttl"><b>${L("Guardar mis datos", "Save my details")}</b><span>${L("Para no escribirlos en cada reserva", "So you don't type them every time")}</span></div>
+      <div class="lang" role="group" aria-label="${L("Idioma", "Language")}"><button data-l="es" lang="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" lang="en" aria-pressed="${S.lang === "en"}">EN</button></div></div>`;
+  }
+  function vSaved() {
+    return top() + `<div class="scr">
+      <div class="hero"><div class="stripe" aria-hidden="true"></div>
+        <h1>${L("Tus datos están guardados", "Your details are saved")}</h1>
+        <p><b>${esc(user.e)}</b></p></div>
+      <a class="cta" href="${CONFIG.HOME}" style="text-decoration:none;text-align:center">${L("Ir a reservar", "Go to booking")}<small>${L("Elige máquina y hora", "Pick machine and hour")}</small></a>
+      <button class="btn2" id="forget">${L("Borrar mis datos de este dispositivo", "Remove my details from this device")}</button>
+      <p class="note">${L("Si el PIN guardado no es correcto, la reserva se rechaza y te llega un correo. Borra tus datos y guárdalos otra vez.", "If the saved PIN is wrong, the booking is rejected and you get an email. Remove your details and save them again.")}</p>
+    </div>`;
+  }
+  function vForm() {
+    return top() + `<form class="scr" id="f" novalidate>
+      <label class="fld"><span>Email</span><input id="e" type="email" autocomplete="email" inputmode="email" placeholder="nombre@alumnos.uchceu.es" value="${esc(S.email)}"></label>
+      <label class="fld"><span>PIN</span><input id="p" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}" placeholder="••••"></label>
+      ${S.err ? `<p class="err" role="alert">${S.err}</p>` : ""}
+      <label class="chk" for="r"><input type="checkbox" id="r"><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>
+      <button class="cta" type="submit">${L("Guardar y reservar", "Save and book")}<small>${L("Después eliges máquina y hora", "Then pick machine and hour")}</small></button>
+      <p class="note">${L("Esto no es un inicio de sesión: la página no comprueba tus datos. El PIN se comprueba al enviar la reserva: si no es correcto, te llega un correo. Para cancelar una cita usa el enlace Cancelar cita de tu correo.", "This isn't a login: the page doesn't check your details. Your PIN is checked when you send the booking: if it's wrong, you get an email. To cancel a booking, use the Cancel a booking link in your email.")}</p>
+      <p class="note"><a href="${esc(CONFIG.FORGOT_URL)}" target="_blank" rel="noopener">${L("¿Has olvidado tu PIN?", "Forgot your PIN?")}</a> · <a href="${CONFIG.CREATE_PAGE}">${L("¿No tienes cuenta? Créala desde Corte láser", "No account? Create it from Laser cutting")}</a></p>
+    </form>`;
+  }
+  function render() {
+    document.documentElement.lang = S.lang;
+    document.title = L("Guardar mis datos - Taller ESET", "Save my details - ESET Workshop");
+    app.innerHTML = user ? vSaved() : vForm();
+    app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.l; try { localStorage.setItem("eset_lang", S.lang); } catch(e) {} render(); });
+    const fg = $("forget"); if (fg) fg.onclick = () => { store.clear("eset_user"); user = null; render(); };
+    const f = $("f"); if (f) f.onsubmit = ev => {
+      ev.preventDefault();
+      const e = ($("e").value || "").trim().toLowerCase(), p = ($("p").value || "").trim();
+      S.email = e;
+      if (!CONFIG.EMAIL_RE.test(e)) { S.err = L("Escribe tu email de la universidad (@alumnos.uchceu.es o @uchceu.es).", "Type your university email (@alumnos.uchceu.es or @uchceu.es)."); render(); return; }
+      if (!/^\d{4}$/.test(p)) { S.err = L("El PIN tiene 4 cifras.", "The PIN has 4 digits."); render(); return; }
+      // Keep the Links Code if these details came from the same student's personal link before.
+      let c = ""; try { const old = JSON.parse(store.get("eset_user") || "null"); if (old && old.e === e && old.c) c = old.c; } catch(err) {}
+      store.set("eset_user", JSON.stringify({ e, p, c }), $("r").checked);
+      location.href = CONFIG.HOME;
+    };
+  }
+  render();
+})();
+</script>
+</body>
+</html>
