@@ -61,7 +61,7 @@ const CONFIG = {
   PUBLIC_BASE_ID: "appyWBQIm4FMyO2Pj", // "Public View Calendar" base (only synced hours, no student data)
   TABLE: "tbl0ZTV8k50aDi9QE",          // synced table "Public slots" (id, so renaming it doesn't break the page)
   VIEW: "",                           // optional view name in that table
-  TOKEN: "pat4YBsSV9puFpi99.015158273bbf078de7917558e0579c58bd01b19047638cac1cf92de86ea1a26b",                          // personal access token: data.records:read, that base only
+  TOKEN: "",                          // personal access token: data.records:read, that base only
   FIELDS: { label: "Slot Label", start: "Start", machine: "Machine", available: "Available" },
 
   // Solicitar cita form (main base). Prefill field names checked against the real forms on 2026-11-03.
@@ -281,9 +281,12 @@ const CONFIG = {
   const pf = (k, v) => "prefill_" + enc(k).replace(/%20/g,"+") + "=" + enc(v) + "&hide_" + enc(k).replace(/%20/g,"+") + "=true";
   // The hour (linked record) is prefilled but NOT hidden: Airtable won't submit the form if it is hidden.
   const pfShow = (k, v) => "prefill_" + enc(k).replace(/%20/g,"+") + "=" + enc(v);
-  function bookQuery() { const p = [pf(CONFIG.PREFILL.machine, S.machine), pfShow(CONFIG.PREFILL.slot, S.slot.label)]; if (user) p.push(who()); return p.join("&"); }
+  // Booking and Mis horas: the saved email is filled in but VISIBLE, so a typo can be seen before sending; the PIN stays hidden.
+  // (The cancel link keeps both hidden: it only exists for details that came from the email link, so the email is right.)
+  const whoShowEmail = () => user ? pfShow(CONFIG.PREFILL.email, user.e) + "&" + pf(CONFIG.PREFILL.pin, user.p) : "";
+  function bookQuery() { const p = [pf(CONFIG.PREFILL.machine, S.machine), pfShow(CONFIG.PREFILL.slot, S.slot.label)]; if (user) p.push(whoShowEmail()); return p.join("&"); }
   const cancelLink = () => user && user.c ? CONFIG.CANCEL_URL + "?" + who() + "&prefill_Entered+Code=" + enc(user.c) + "&hide_Entered+Code=true" : null;
-  const hoursLink = () => user ? CONFIG.HOURS_URL + "?" + who() : CONFIG.HOURS_URL;
+  const hoursLink = () => user ? CONFIG.HOURS_URL + "?" + whoShowEmail() : CONFIG.HOURS_URL;
 
   // ---- Views ----
   function topbar(title, sub, back) {

@@ -51,12 +51,13 @@ const CONFIG = {
         <p><b>${esc(user.e)}</b></p></div>
       <a class="cta" href="${CONFIG.HOME}" style="text-decoration:none;text-align:center">${L("Ir a reservar", "Go to booking")}<small>${L("Elige máquina y hora", "Pick machine and hour")}</small></a>
       <button class="btn2" id="forget">${L("Borrar mis datos de este dispositivo", "Remove my details from this device")}</button>
-      <p class="note">${L("Si el PIN guardado no es correcto, la reserva se rechaza y te llega un correo. Borra tus datos y guárdalos otra vez.", "If the saved PIN is wrong, the booking is rejected and you get an email. Remove your details and save them again.")}</p>
+      <p class="note">${L("Comprueba que el email de arriba es el de tu cuenta: si tiene un error, las reservas se rechazan y el aviso no te llega. Si el PIN no es correcto, la reserva se rechaza y te llega un correo. En los dos casos, borra tus datos y guárdalos otra vez.", "Check that the email above is your account's: if it has a typo, bookings are rejected and the notice never reaches you. If the PIN is wrong, the booking is rejected and you get an email. Either way, remove your details and save them again.")}</p>
     </div>`;
   }
   function vForm() {
     return top() + `<form class="scr" id="f" novalidate>
       <label class="fld"><span>Email</span><input id="e" type="email" autocomplete="email" inputmode="email" placeholder="nombre@alumnos.uchceu.es" value="${esc(S.email)}"></label>
+      <label class="fld"><span>${L("Repite el email", "Repeat your email")}</span><input id="e2" type="email" autocomplete="off" inputmode="email" placeholder="nombre@alumnos.uchceu.es" value="${esc(S.email2 || "")}"></label>
       <label class="fld"><span>PIN</span><input id="p" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}" placeholder="••••"></label>
       ${S.err ? `<p class="err" role="alert">${S.err}</p>` : ""}
       <label class="chk" for="r"><input type="checkbox" id="r"><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>
@@ -73,9 +74,10 @@ const CONFIG = {
     const fg = $("forget"); if (fg) fg.onclick = () => { store.clear("eset_user"); user = null; render(); };
     const f = $("f"); if (f) f.onsubmit = ev => {
       ev.preventDefault();
-      const e = ($("e").value || "").trim().toLowerCase(), p = ($("p").value || "").trim();
-      S.email = e;
+      const e = ($("e").value || "").trim().toLowerCase(), e2 = ($("e2").value || "").trim().toLowerCase(), p = ($("p").value || "").trim();
+      S.email = e; S.email2 = e2;
       if (!CONFIG.EMAIL_RE.test(e)) { S.err = L("Escribe tu email de la universidad (@alumnos.uchceu.es o @uchceu.es).", "Type your university email (@alumnos.uchceu.es or @uchceu.es)."); render(); return; }
+      if (e !== e2) { S.err = L("Los dos emails no coinciden. Escríbelo igual en los dos campos.", "The two emails don't match. Type it the same in both boxes."); render(); return; }
       if (!/^\d{4}$/.test(p)) { S.err = L("El PIN tiene 4 cifras.", "The PIN has 4 digits."); render(); return; }
       // Keep the Links Code if these details came from the same student's personal link before.
       let c = ""; try { const old = JSON.parse(store.get("eset_user") || "null"); if (old && old.e === e && old.c) c = old.c; } catch(err) {}
