@@ -150,17 +150,20 @@ const CONFIG = {
   const langSwitch = () => `<div class="lang" role="group" aria-label="${L("Idioma", "Language")}"><button data-l="es" lang="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" lang="en" aria-pressed="${S.lang === "en"}">EN</button></div>`;
 
   // Canva: the page can't see scrolling inside it, so there's no "read to the end" check; the tick boxes stay required.
+  // Materials table (which materials can be cut), one image per language
+  const matImg = () => `<img class="matimg" src="${L("materiales-es.jpg", "materials-en.jpg")}" alt="${L("Tabla de materiales que sí se cortan y que no se cortan. El PVC no entra en el láser nunca.", "Table of materials that can and cannot be cut. PVC never goes in the laser.")}" loading="lazy">`;
   function rulesPanel() {
     return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
       <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
-      <div class="rfoot"><a href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener">↗ ${L("Abrir en pantalla completa", "Open full screen")}</a></div></section>`;
+      <div class="rfoot"><a href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener">↗ ${L("Abrir en pantalla completa", "Open full screen")}</a></div>
+      <div class="rmat">${matImg()}</div></section>`;
   }
 
   // ---- State ----
   const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, ack: false };
   S.lang = initLang();
   // Direct links to a tab: index.html#laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
-  const ROUTE = { laser: "laser", tutoriales: "tut", tutorials: "tut", impresion3d: "print3d", "3d": "print3d" };
+  const ROUTE = { laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d" };
   const r0 = location.hash.slice(1).toLowerCase(); if (ROUTE[r0]) S.screen = ROUTE[r0];
   window.addEventListener("hashchange", () => { const r = ROUTE[location.hash.slice(1).toLowerCase()]; if (r) { S.sheet = false; S.screen = r; render(); window.scrollTo(0, 0); } });
   S.vid = null;
@@ -289,7 +292,7 @@ const CONFIG = {
     `<button data-nav="${k}" aria-current="${section() === k ? "page" : "false"}"><span aria-hidden="true">${ic}</span><b>${L(es, en)}</b></button>`).join("")}</nav>`;
   const laserTabs = () => `<div class="mseg" role="group" aria-label="${L("Corte láser", "Laser cutting")}">
       <button data-lt="laser" aria-pressed="${S.screen === "laser"}">📅 ${L("Reservas", "Bookings")}<small>${L("Reservar y cuenta", "Book and account")}</small></button>
-      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">🎬 ${L("Tutoriales", "Tutorials")}<small>${L("Reglamento y vídeos", "Rules and videos")}</small></button></div>`;
+      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">📄 ${L("Reglamento y uso", "Rules and usage")}<small>${L("Manual y vídeos", "Manual and videos")}</small></button></div>`;
   function tutCard(t, i) {
     const title = esc(L(t.es, t.en || t.es));
     let media;
@@ -301,7 +304,7 @@ const CONFIG = {
   }
   function vTut() {
     const list = CONFIG.TUTORIALS || [];
-    return topbar(L("Corte láser", "Laser cutting"), L("Tutoriales en vídeo", "Video tutorials"), true) + `<div class="scr">${laserTabs()}
+    return topbar(L("Corte láser", "Laser cutting"), L("Reglamento y uso", "Rules and usage"), true) + `<div class="scr">${laserTabs()}
       ${rulesPanel()}
       ${list.map(tutCard).join("")}</div>`;
   }
@@ -319,6 +322,7 @@ const CONFIG = {
         <button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button>
       </div>
       ${docCard()}
+      ${matImg()}
       ${user ? "" : saveCard()}
     </div>`;
   }
