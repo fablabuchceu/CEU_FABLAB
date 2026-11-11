@@ -74,12 +74,13 @@ const CONFIG = {
   CANCEL_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagPvXUS8hYoHCP4J/form",
   HOURS_URL:  "https://airtable.com/appeQ6gkuiJAq7wiT/pagKr3hOks4XqRsmD/form",
   CALENDAR_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/shrvGOhBZWWmbCsk3",
-  // Rules PDF for each language. Now one PDF: Castellano on page 1, English on page 3.
-  // If they become two files, e.g. { es: "reglamiento-es.pdf", en: "rules-en.pdf" }.
-  RULES_PDF: { es: "reglamiento.pdf#page=1", en: "reglamiento.pdf#page=3" },
+  // Reglamento y uso: Canva design, public view link (replaced reglamento.pdf on 2026-11-11). It includes the tutorial videos.
+  // RULES_EMBED = the same view link + "?embed". Shown beside the calendar, on the Crear cuenta step and in the Tutoriales tab.
+  RULES_DOC:   "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view",
+  RULES_EMBED: "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view?embed",
   RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
 
-  // Tutoriales tab (laser). One entry per video, in order. SharePoint/Stream video: Share → Embed code → copy the
+  // Tutoriales tab (laser): shows the Canva document (RULES_EMBED) and, below it, any extra videos listed here. One entry per video. SharePoint/Stream video: Share → Embed code → copy the
   // src="…/_layouts/15/embed.aspx?UniqueId=…" link into "embed", and the normal share link into "url" (shown as
   // "Open in SharePoint"). Viewers must be signed in to CEU Microsoft 365. An .mp4 in this repo can go in "video" instead.
   TUTORIALS: [
@@ -137,71 +138,31 @@ const CONFIG = {
   const remembered = () => { try { return !!localStorage.getItem("eset_user"); } catch(e){ return false; } };
 
 
-  // ---- Rules document (same content as reglamiento.pdf) ----
-  const RULES = {
-    es: `<h3>Requisitos obligatorios para el corte láser CO2 en el taller de prototipos ESET</h3>
-<ul>
-<li><b>Información obligatoria:</b> indicar asignatura y profesor/a responsable del proyecto para cortar/grabar.</li>
-<li><b>Formato de archivo:</b> envía archivos vectoriales en formato .DXF - AutoCAD 2019.</li>
-<li><b>Área máxima de trabajo (tamaño de plancha):</b> el diseño no puede exceder el volumen físico de las máquinas (X × Y):
-<ul><li>Epilog Helix: 600 × 400 mm</li><li>Epilog Fusion Edge: 600 × 600 mm</li></ul></li>
-<li><b>Espesores máximos (Z):</b> grosor máximo del material a cortar:
-<ul><li>Madera maciza: 4 mm (balsa, pino, abedul)</li><li>Contrachapado: 5 mm (chopo)</li><li>Capa de madera (veneer): 1,5 mm</li><li>Cartón y papel: 5 mm (cartón gris, cartulina, papel Kraft…)</li><li>Corcho: 5 mm</li><li>Cuero curtido vegetal: 3 mm</li><li>Fieltro de lana y tejidos naturales: 4 mm</li><li>Metacrilato colado y plexiglás: 6 mm</li><li>Acetato de celulosa: 1 mm</li></ul></li>
-</ul>
-<img src="materiales-es.jpg" alt="Tabla de materiales que sí se cortan y que no se cortan. El PVC no entra en el láser nunca." loading="lazy">
-<ul>
-<li><b>Escala de trabajo:</b> verifica que las unidades de tu archivo exportado estén configuradas estrictamente en milímetros (mm).</li>
-<li><b>Limpieza de geometría (líneas duplicadas):</b> es obligatorio revisar y eliminar las líneas superpuestas o duplicadas antes de enviar el archivo, para evitar quemaduras excesivas en el material y pasadas dobles del láser (peor acabado, piezas fallidas y más tiempo de corte):
-<ul><li>En AutoCAD, utiliza el comando OVERKILL (o ELIMINARSOBRANTE) para limpiar y fusionar líneas superpuestas automáticamente.</li><li>Revisa las polilíneas; si es necesario, córtalas o explótalas para que los contornos sean líneas continuas y limpias, sin tramos abiertos ni intersecciones incorrectas.</li></ul></li>
-<li><b>Unión de piezas pequeñas:</b> si el diseño tiene piezas muy pequeñas (se pueden caer por la rejilla de la máquina, o soltarse y cortarse), se recomienda unirlas con unas pestañas (dividir la línea de corte dejando 1 mm sin cortar).<img src="pestanas-es.png" alt="Ejemplo de pestaña: la línea de corte se interrumpe y deja 1 mm sin cortar." loading="lazy" style="max-width:220px"></li>
-<li><b>Configuración de capas y colores:</b> los elementos vectoriales deben organizarse en capas independientes con estos colores (grosor de línea mínimo o 0,00 mm):
-<ul><li><span class="sw" style="background:#00ffff"></span><b>Azul cian RGB (0,255,255):</b> grabado vectorial (marcas, textos…).</li><li><span class="sw" style="background:#ff0000"></span><b>Rojo RGB (255,0,0):</b> corte interior (se ejecuta siempre primero para evitar que la pieza se mueva al liberarse).</li><li><span class="sw" style="background:#00ff00"></span><b>Verde RGB (0,255,0):</b> corte exterior (se ejecuta en último lugar).</li></ul></li>
-</ul>
-<p class="warn"><b>Aviso:</b> si el archivo no cumple con la totalidad de estos requisitos técnicos cuando lo revisemos en el taller, será rechazado y no se cortará/grabará la pieza.</p>
-<p class="key">Reservar a través del QR; los archivos se revisan en el momento de la reserva. Los alumnos deben estar presentes mientras se hace su trabajo; si el alumno no está presente, no se realizará el trabajo. El alumno debe poner y quitar el material de la máquina.</p>`,
-    en: `<h3>Mandatory requirements for CO2 laser cutting at the ESET prototype workshop</h3>
-<ul>
-<li><b>Required information:</b> specify the course and the professor in charge of the project to be cut or engraved.</li>
-<li><b>File format:</b> submit vector files in .DXF format (AutoCAD 2019 compatible).</li>
-<li><b>Maximum working area (sheet size):</b> the design must not exceed the physical dimensions of the machines (X × Y):
-<ul><li>Epilog Helix: 600 × 400 mm</li><li>Epilog Fusion Edge: 600 × 600 mm</li></ul></li>
-<li><b>Maximum thicknesses (Z):</b> maximum thickness of the material to be cut:
-<ul><li>Solid wood: 4 mm (balsa, pine, birch)</li><li>Plywood: 5 mm (poplar)</li><li>Wood veneer: 1.5 mm</li><li>Cardboard and paper: 5 mm (grey board, cardstock, Kraft paper, etc.)</li><li>Cork: 5 mm</li><li>Vegetable-tanned leather: 3 mm</li><li>Wool felt and natural fabrics: 4 mm</li><li>Cast acrylic and Plexiglas: 6 mm</li><li>Cellulose acetate: 1 mm</li></ul></li>
-</ul>
-<img src="materials-en.jpg" alt="Table of materials that can and cannot be cut. PVC never goes in the laser." loading="lazy">
-<ul>
-<li><b>Working scale:</b> make sure the units of your exported file are strictly set to millimetres (mm).</li>
-<li><b>Geometry cleanup (duplicate lines):</b> you must review and remove overlapping or duplicate lines before submitting the file, to prevent excessive burning and double laser passes (poorer finish, failed parts and more cutting time):
-<ul><li>In AutoCAD, use the OVERKILL command to clean and merge overlapping lines automatically.</li><li>Check polylines; if needed, trim or explode them so contours are continuous, clean lines, without open segments or incorrect intersections.</li></ul></li>
-<li><b>Small parts connection:</b> if the design has very small parts (they may fall through the honeycomb bed, or come loose and be cut separately), connect them with tabs by interrupting the cut line and leaving 1 mm uncut.<img src="tabs-en.png" alt="Tab example: the cut line is interrupted, leaving 1 mm uncut." loading="lazy" style="max-width:220px"></li>
-<li><b>Layer and colour configuration:</b> vector elements must be organised into separate layers with these colours (minimum line weight or 0.00 mm):
-<ul><li><span class="sw" style="background:#00ffff"></span><b>Cyan blue RGB (0,255,255):</b> vector engraving (marks, text…).</li><li><span class="sw" style="background:#ff0000"></span><b>Red RGB (255,0,0):</b> internal cutting (always runs first so the part doesn't move when freed).</li><li><span class="sw" style="background:#00ff00"></span><b>Green RGB (0,255,0):</b> external cutting (runs last).</li></ul></li>
-</ul>
-<p class="warn"><b>Notice:</b> if the file does not meet all of these technical requirements when we review it in the workshop, it will be rejected and the part will not be cut or engraved.</p>
-<p class="key">Book via the QR code; files are reviewed at the time of booking. Students must be present while their work is being done; if the student is not present, the job will not be carried out. The student loads and unloads the material from the machine.</p>`
-  };
+  // (Rules text removed 2026-11-11: the Reglamento y uso document is now the Canva design in CONFIG.RULES_DOC / RULES_EMBED.)
   // ---- Language (one at a time; ES/EN switch at the top of every screen) ----
   const L = (es, en) => S.lang === "en" ? en : es;
   const fDay = d => FMT[S.lang].format(d);
-  const pdfHref = () => CONFIG.RULES_PDF[S.lang] || CONFIG.RULES_PDF.es;
+  const pdfHref = () => CONFIG.RULES_DOC;
   function initLang() {
     try { const s = localStorage.getItem("eset_lang"); if (s === "es" || s === "en") return s; } catch(e) {}
     return /^en(-|$)/i.test(navigator.language || "") ? "en" : "es";
   }
   const langSwitch = () => `<div class="lang" role="group" aria-label="${L("Idioma", "Language")}"><button data-l="es" lang="es" aria-pressed="${S.lang === "es"}">ES</button><button data-l="en" lang="en" aria-pressed="${S.lang === "en"}">EN</button></div>`;
 
-  function rulesPanel(withEnd) {
+  // Canva: the page can't see scrolling inside it, so there's no "read to the end" check; the tick boxes stay required.
+  function rulesPanel() {
     return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
-      <div class="rbody" id="rbody">${RULES[S.lang]}${withEnd ? `<div class="rend" id="rend">${S.readDone ? L("✓ Has llegado al final", "✓ You reached the end") : L("↓ Lee hasta el final", "↓ Read to the end")}</div>` : ""}</div>
-      <div class="rfoot"><a href="${esc(pdfHref())}" target="_blank" rel="noopener">⬇️ PDF (${S.lang.toUpperCase()})</a></div></section>`;
+      <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
+      <div class="rfoot"><a href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener">↗ ${L("Abrir en pantalla completa", "Open full screen")}</a></div></section>`;
   }
 
   // ---- State ----
-  const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: false, readTick: false, ack: false };
+  const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, ack: false };
   S.lang = initLang();
   // Direct links to a tab: index.html#laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
   const ROUTE = { laser: "laser", tutoriales: "tut", tutorials: "tut", impresion3d: "print3d", "3d": "print3d" };
   const r0 = location.hash.slice(1).toLowerCase(); if (ROUTE[r0]) S.screen = ROUTE[r0];
+  window.addEventListener("hashchange", () => { const r = ROUTE[location.hash.slice(1).toLowerCase()]; if (r) { S.sheet = false; S.screen = r; render(); window.scrollTo(0, 0); } });
   S.vid = null;
   try { S.ack = sessionStorage.getItem("eset_ack") === "1"; } catch(e) {}
 
@@ -305,7 +266,7 @@ const CONFIG = {
     return `<div class="top">${back ? `<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
   }
   const demoNote = () => DEMO ? `<div class="demo">${L("Modo demostración: horas de ejemplo", "Demo mode: example hours")}</div>` : "";
-  const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">PDF</span><div><b>${L("Reglamiento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
+  const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">DOC</span><div><b>${L("Reglamiento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
 
   const saveCard = () => `<a class="doc save" href="entrar.html"><span class="ic" aria-hidden="true">🔑</span><div><b>${L("Guardar mis datos", "Save my details")}</b><span>${L("Ya tengo cuenta: no escribir email y PIN en cada reserva", "I have an account: skip typing email and PIN every time")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
   function vHome() {
@@ -328,7 +289,7 @@ const CONFIG = {
     `<button data-nav="${k}" aria-current="${section() === k ? "page" : "false"}"><span aria-hidden="true">${ic}</span><b>${L(es, en)}</b></button>`).join("")}</nav>`;
   const laserTabs = () => `<div class="mseg" role="group" aria-label="${L("Corte láser", "Laser cutting")}">
       <button data-lt="laser" aria-pressed="${S.screen === "laser"}">📅 ${L("Reservas", "Bookings")}<small>${L("Reservar y cuenta", "Book and account")}</small></button>
-      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">🎬 ${L("Tutoriales", "Tutorials")}<small>${L("Vídeos", "Videos")}</small></button></div>`;
+      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">🎬 ${L("Tutoriales", "Tutorials")}<small>${L("Reglamento y vídeos", "Rules and videos")}</small></button></div>`;
   function tutCard(t, i) {
     const title = esc(L(t.es, t.en || t.es));
     let media;
@@ -341,8 +302,8 @@ const CONFIG = {
   function vTut() {
     const list = CONFIG.TUTORIALS || [];
     return topbar(L("Corte láser", "Laser cutting"), L("Tutoriales en vídeo", "Video tutorials"), true) + `<div class="scr">${laserTabs()}
-      ${list.length ? list.map(tutCard).join("") : `<div class="state"><p><b>${L("Pronto añadiremos los vídeos del tutorial.", "The tutorial videos are coming soon.")}</b></p></div>`}
-      <p class="note">${L("Los vídeos están en SharePoint de CEU. Si no se ven, inicia sesión con tu cuenta de la universidad o usa «Abrir en SharePoint».", "The videos are on CEU SharePoint. If they don't show, sign in with your university account or use “Open in SharePoint”.")}</p></div>`;
+      ${rulesPanel()}
+      ${list.map(tutCard).join("")}</div>`;
   }
   function vPrint3d() {
     return topbar(L("Impresión 3D", "3D printing"), L("Próximamente", "Coming soon"), true) + `<div class="scr">
@@ -364,8 +325,8 @@ const CONFIG = {
   function vGate() {
     const ok = S.readDone && S.readTick;
     return topbar(L("Crear cuenta", "Create account"), L("Paso 1: reglamento", "Step 1: rules"), true) + `<div class="scr">
-      <p class="note">${L("📄 Lee el reglamento hasta el final. Después marca la casilla y crea tu cuenta.", "📄 Read the rules to the end. Then tick the box and create your account.")}</p>
-      ${rulesPanel(true)}
+      <p class="note">${L("📄 Lee el reglamento y mira los vídeos. Después marca la casilla y crea tu cuenta.", "📄 Read the rules and watch the videos. Then tick the box and create your account.")}</p>
+      ${rulesPanel()}
       <div class="gate">
         <label class="chk" for="gTick"><input type="checkbox" id="gTick" ${S.readTick ? "checked" : ""} ${S.readDone ? "" : "disabled"}><span><b>${L("He leído el reglamento y lo cumpliré.", "I have read the rules and will follow them.")}</b></span></label>
         <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>${L("Crear cuenta", "Create account")}<small>${ok ? L("Se abre el formulario", "Opens the form") : S.readDone ? L("Marca la casilla", "Tick the box") : L("Primero lee hasta el final", "Read to the end first")}</small></button>
