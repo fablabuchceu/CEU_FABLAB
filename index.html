@@ -79,6 +79,13 @@ const CONFIG = {
   RULES_PDF: { es: "reglamiento.pdf#page=1", en: "reglamiento.pdf#page=3" },
   RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
 
+  // Tutoriales tab (laser). One entry per video, in order. SharePoint/Stream video: Share → Embed code → copy the
+  // src="…/_layouts/15/embed.aspx?UniqueId=…" link into "embed", and the normal share link into "url" (shown as
+  // "Open in SharePoint"). Viewers must be signed in to CEU Microsoft 365. An .mp4 in this repo can go in "video" instead.
+  TUTORIALS: [
+    // { es: "Preparar el archivo DXF", en: "Preparing the DXF file", embed: "", url: "", video: "" },
+  ],
+
   MACHINES: [ { id: "Fusion Edge 60W", short: "Fusion Edge", w: "60 W" }, { id: "Helix 50W", short: "Helix", w: "50 W" } ],
   DAYS_AHEAD: 30,
   TZ: "Europe/Madrid",
@@ -192,6 +199,10 @@ const CONFIG = {
   // ---- State ----
   const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: false, readTick: false, ack: false };
   S.lang = initLang();
+  // Direct links to a tab: index.html#laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
+  const ROUTE = { laser: "laser", tutoriales: "tut", tutorials: "tut", impresion3d: "print3d", "3d": "print3d" };
+  const r0 = location.hash.slice(1).toLowerCase(); if (ROUTE[r0]) S.screen = ROUTE[r0];
+  S.vid = null;
   try { S.ack = sessionStorage.getItem("eset_ack") === "1"; } catch(e) {}
 
   // ---- Data ----
@@ -310,8 +321,37 @@ const CONFIG = {
       ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>` : ""}
     </div>`;
   }
+  // ---- Side tabs (Inicio / Impresión 3D / Láser) and laser sub-tabs (Reservas / Tutoriales) ----
+  const NAV = [["home", "🏠", "Inicio", "Home"], ["print3d", "🖨️", "Impresión 3D", "3D printing"], ["laser", "✂️", "Láser", "Laser"]];
+  const section = () => S.screen === "home" ? "home" : S.screen === "print3d" ? "print3d" : "laser";
+  const rail = () => `<nav class="rail" aria-label="${L("Secciones", "Sections")}">${NAV.map(([k, ic, es, en]) =>
+    `<button data-nav="${k}" aria-current="${section() === k ? "page" : "false"}"><span aria-hidden="true">${ic}</span><b>${L(es, en)}</b></button>`).join("")}</nav>`;
+  const laserTabs = () => `<div class="mseg" role="group" aria-label="${L("Corte láser", "Laser cutting")}">
+      <button data-lt="laser" aria-pressed="${S.screen === "laser"}">📅 ${L("Reservas", "Bookings")}<small>${L("Reservar y cuenta", "Book and account")}</small></button>
+      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">🎬 ${L("Tutoriales", "Tutorials")}<small>${L("Vídeos", "Videos")}</small></button></div>`;
+  function tutCard(t, i) {
+    const title = esc(L(t.es, t.en || t.es));
+    let media;
+    if (S.vid === i && (t.video || t.embed)) media = t.video ? `<video controls playsinline preload="metadata" src="${esc(t.video)}"></video>`
+      : `<iframe src="${esc(t.embed)}" title="${title}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+    else if (t.video || t.embed) media = `<button class="vplay" data-v="${i}" aria-label="${L("Ver", "Play")}: ${title}"><span aria-hidden="true">▶</span></button>`;
+    else media = `<a class="vplay" href="${esc(t.url || "#")}" target="_blank" rel="noopener" aria-label="${L("Ver", "Play")}: ${title}"><span aria-hidden="true">▶</span></a>`;
+    return `<figure class="vid"><div class="vbox">${media}</div><figcaption><b>${title}</b>${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${L("Abrir en SharePoint", "Open in SharePoint")} ↗</a>` : ""}</figcaption></figure>`;
+  }
+  function vTut() {
+    const list = CONFIG.TUTORIALS || [];
+    return topbar(L("Corte láser", "Laser cutting"), L("Tutoriales en vídeo", "Video tutorials"), true) + `<div class="scr">${laserTabs()}
+      ${list.length ? list.map(tutCard).join("") : `<div class="state"><p><b>${L("Pronto añadiremos los vídeos del tutorial.", "The tutorial videos are coming soon.")}</b></p></div>`}
+      <p class="note">${L("Los vídeos están en SharePoint de CEU. Si no se ven, inicia sesión con tu cuenta de la universidad o usa «Abrir en SharePoint».", "The videos are on CEU SharePoint. If they don't show, sign in with your university account or use “Open in SharePoint”.")}</p></div>`;
+  }
+  function vPrint3d() {
+    return topbar(L("Impresión 3D", "3D printing"), L("Próximamente", "Coming soon"), true) + `<div class="scr">
+      <div class="banner">${svg("svgPrinter")}</div>
+      <div class="state"><p><b>${L("La impresión 3D estará disponible pronto en esta página.", "3D printing will be available on this page soon.")}</b></p></div></div>`;
+  }
   function vLaser() {
     return topbar(L("Corte láser", "Laser cutting"), L("Cortadoras láser CO₂", "CO₂ laser cutters"), true) + `<div class="scr">
+      ${laserTabs()}
       <div class="banner">${svg("svgLaser")}</div>
       <div class="actions">
         <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>${L("Solicitar cita", "Book")}</b><span>${L("Ver horas libres y reservar", "See free hours and book")}</span></div><span class="ch">${I.next}</span></button>
@@ -397,10 +437,14 @@ const CONFIG = {
   function render() {
     document.documentElement.lang = S.lang;
     document.title = L("Taller ESET - Reservas", "ESET Workshop - Bookings");
-    app.innerHTML = (S.screen === "home" ? vHome() : S.screen === "laser" ? vLaser() : S.screen === "gate" ? vGate() : vCal()) + vSheet();
+    const V = { home: vHome, laser: vLaser, gate: vGate, tut: vTut, print3d: vPrint3d, cal: vCal };
+    app.innerHTML = rail() + (V[S.screen] || vHome)() + vSheet();
     app.classList.toggle("wide", S.screen === "cal");
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
     on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : S.screen === "gate" ? "laser" : "home"; render(); window.scrollTo(0, 0); });
+    app.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { S.sheet = false; S.screen = b.dataset.nav; render(); window.scrollTo(0, 0); });
+    app.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { S.screen = b.dataset.lt; S.vid = null; render(); });
+    app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
     on("out", () => { store.clear("eset_user"); user = null; S.sheet = false; S.screen = "home"; render(); });
     on("tLaser", () => { S.screen = user ? "cal" : "laser"; if (S.screen === "cal" && !S.records && !S.loading) load(); else render(); });
     on("aBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); });
@@ -420,7 +464,7 @@ const CONFIG = {
     on("scrim", () => { S.sheet = false; render(); });
     on("close", () => { const was = S.sheet; S.sheet = false; if (was === "book") { S.slot = null; load(); } else render(); });
     const rem = $("rem"); if (rem) rem.onchange = () => store.set("eset_user", JSON.stringify(user), rem.checked);
-    app.querySelectorAll(".mseg button").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
+    app.querySelectorAll(".mseg button[data-m]").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
     app.querySelectorAll(".day[data-k]:not([disabled])").forEach(b => b.onclick = () => { S.day = b.dataset.k; S.slot = null; render(); });
     on("mPrev", () => { const ms = months(), i = ms.indexOf(S.month); if (i > 0) { S.month = ms[i - 1]; render(); } });
     on("mNext", () => { const ms = months(), i = ms.indexOf(S.month); if (i < ms.length - 1) { S.month = ms[i + 1]; render(); } });
