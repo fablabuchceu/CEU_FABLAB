@@ -162,8 +162,8 @@ const CONFIG = {
   // ---- State ----
   const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, ack: false };
   S.lang = initLang();
-  // Direct links to a tab: index.html#laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
-  const ROUTE = { laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d" };
+  // Direct links to a tab: index.html#inicio, #crear-cuenta, #laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
+  const ROUTE = { inicio: "home", home: "home", "crear-cuenta": "gate", cuenta: "gate", "create-account": "gate", laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d" };
   const r0 = location.hash.slice(1).toLowerCase(); if (ROUTE[r0]) S.screen = ROUTE[r0];
   window.addEventListener("hashchange", () => { const r = ROUTE[location.hash.slice(1).toLowerCase()]; if (r) { S.sheet = false; S.screen = r; render(); window.scrollTo(0, 0); } });
   S.vid = null;
@@ -272,6 +272,8 @@ const CONFIG = {
   const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">DOC</span><div><b>${L("Reglamiento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
 
   const saveCard = () => `<a class="doc save" href="entrar.html"><span class="ic" aria-hidden="true">🔑</span><div><b>${L("Guardar mis datos", "Save my details")}</b><span>${L("Ya tengo cuenta: no escribir email y PIN en cada reserva", "I have an account: skip typing email and PIN every time")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
+  // Crear cuenta lives on Inicio (step 3, 12 Nov): students can register without going into Láser first. The rules gate (vGate) still comes before the form.
+  const createCard = () => `<div class="actions"><button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button></div>`;
   function vHome() {
     return topbar("Taller ESET", "Fab Lab 2026-2027", false) + `<div class="scr">${demoNote()}
       <div class="hero"><div class="stripe" aria-hidden="true"></div>
@@ -281,13 +283,14 @@ const CONFIG = {
         <button class="tile" id="tLaser"><div class="pic">${svg("svgLaser")}</div><div class="cap"><div><b>${L("Corte láser", "Laser cutting")}</b><span>${CONFIG.MACHINES.map(m => esc(m.id)).join(" · ")}</span></div><span class="go">${I.next}</span></div></button>
         <div class="tile" aria-disabled="true"><span class="soon">${L("Próximamente", "Coming soon")}</span><div class="pic">${svg("svgPrinter")}</div><div class="cap"><div><b>${L("Impresión 3D", "3D printing")}</b><span>${L("Disponible pronto", "Available soon")}</span></div><span class="go">${I.next}</span></div></div>
       </div>
+      ${user ? "" : createCard()}
       ${user ? "" : saveCard()}
       ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>` : ""}
     </div>`;
   }
   // ---- Side tabs (Inicio / Impresión 3D / Láser) and laser sub-tabs (Reservas / Tutoriales) ----
   const NAV = [["home", "🏠", "Inicio", "Home"], ["print3d", "🖨️", "Impresión 3D", "3D printing"], ["laser", "✂️", "Láser", "Laser"]];
-  const section = () => S.screen === "home" ? "home" : S.screen === "print3d" ? "print3d" : "laser";
+  const section = () => S.screen === "home" || S.screen === "gate" ? "home" : S.screen === "print3d" ? "print3d" : "laser";
   const rail = () => `<nav class="rail" aria-label="${L("Secciones", "Sections")}">${NAV.map(([k, ic, es, en]) =>
     `<button data-nav="${k}" aria-current="${section() === k ? "page" : "false"}"><span aria-hidden="true">${ic}</span><b>${L(es, en)}</b></button>`).join("")}</nav>`;
   const laserTabs = () => `<div class="mseg" role="group" aria-label="${L("Corte láser", "Laser cutting")}">
@@ -319,8 +322,8 @@ const CONFIG = {
       <div class="banner">${svg("svgLaser")}</div>
       <div class="actions">
         <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>${L("Solicitar cita", "Book")}</b><span>${L("Ver horas libres y reservar", "See free hours and book")}</span></div><span class="ch">${I.next}</span></button>
-        <button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button>
       </div>
+      ${user ? "" : `<p class="note">${L("¿Primera vez? Crea tu cuenta en <a href=\"#inicio\" data-nav=\"home\">Inicio</a>.", "First time? Create your account on <a href=\"#inicio\" data-nav=\"home\">Home</a>.")}</p>`}
       ${docCard()}
       ${matImg()}
       ${user ? "" : saveCard()}
@@ -406,7 +409,7 @@ const CONFIG = {
     app.innerHTML = rail() + (V[S.screen] || vHome)() + vSheet();
     app.classList.toggle("wide", S.screen === "cal");
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-    on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : S.screen === "gate" ? "laser" : "home"; render(); window.scrollTo(0, 0); });
+    on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : "home"; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { S.sheet = false; S.screen = b.dataset.nav; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { S.screen = b.dataset.lt; S.vid = null; render(); });
     app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
