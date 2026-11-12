@@ -217,3 +217,8 @@ button{font:inherit;color:inherit}
 .vid figcaption a{font-size:13px;color:var(--muted)}
 .doc.save{border-style:solid;background:var(--surface)}
 .doc.save .ic{font-size:20px}
+/* Impresión 3D tab: the 3D viewer (3d/visor.html) in a frame, height set from its content (CONFIG.PRINT3D) */
+.v3frame{display:block;width:100%;min-height:640px;border:0;border-radius:16px;background:transparent}
+/* Desktop: wider, less scrolling (12 Nov). .two = two columns on the Láser page; tiles side by side. */
+.two{display:grid;gap:16px;align-content:start}.two>.col{display:grid;gap:16px;align-content:start;min-width:0}
+@media (min-width:1000px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}.app.wide .tiles{grid-template-columns:1fr 1fr}.app.wide .banner{aspect-ratio:3/1}.app.wide .tile .pic{aspect-ratio:21/9}}

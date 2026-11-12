@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Visor 3D - 3D viewer</title>
+<!-- Laser → 3D step 12, section S3 (2026-11-12). Fit check + rough material/time estimate for the Bambu Lab P1S.
+     Runs fully in the browser: the file is never uploaded, three.js is in ./vendor (no CDN). -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  .v3{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--app);display:flex;flex-direction:column}
+  .v3 .body{display:grid;gap:16px;padding:4px 16px 24px;grid-template-columns:minmax(0,1fr)}
+  @media (min-width:860px){.v3 .body{grid-template-columns:minmax(0,1fr) 340px;align-items:start}}
+  .stage{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);height:min(62vh,560px)}
+  .stage canvas{display:block;width:100%;height:100%;touch-action:none}
+  .stage .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);font-size:14px;pointer-events:none}
+  .tools{display:flex;flex-wrap:wrap;gap:8px}
+  .tools .btn2{font-size:14px;padding:7px 11px}
+  .tools .btn2[disabled]{opacity:.45;cursor:default}
+  .pick{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;border:1.5px dashed var(--accent);background:var(--accent-soft);cursor:pointer}
+  .pick input{position:absolute;opacity:0;width:1px;height:1px}
+  .pick b{display:block;font:700 18px/1.1 var(--f-display)}
+  .pick span{font-size:13px;color:var(--muted)}
+  .panel{display:grid;gap:12px}
+  .card{padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--surface);display:grid;gap:8px}
+  .card h2{margin:0;font:700 16px var(--f-display);letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+  .row{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+  .row b{font-family:var(--f-mono);font-size:14px}
+  .ok{color:var(--free)} .bad{color:var(--closed)}
+  .big{font:700 28px/1 var(--f-display)}
+  .fname{font-size:13px;color:var(--muted);word-break:break-all}
+  a.cta{display:block;text-decoration:none}
+</style>
+<script src="p1s-settings.js"></script>
+<script src="vendor/occt/occt-import-js.js"></script>
+<script src="estimator.js"></script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div class="v3">
+  <div class="top"><div class="ttl"><b id="tT"></b><span id="tS"></span></div>
+    <div class="lang" role="group"><button data-l="es" lang="es">ES</button><button data-l="en" lang="en">EN</button></div></div>
+  <div class="body">
+    <div style="display:grid;gap:12px;min-width:0">
+      <label class="pick"><input type="file" id="file" accept=".stl,.obj,.step,.stp"><span aria-hidden="true" style="font-size:26px">📦</span>
+        <div><b data-t="pick"></b><span data-t="pickSub"></span></div></label>
+      <div class="stage"><canvas id="cv"></canvas><div class="empty" id="empty" data-t="empty"></div></div>
+      <div class="tools">
+        <button class="btn2" data-rot="x">⟳ X 90°</button><button class="btn2" data-rot="y">⟳ Y 90°</button><button class="btn2" data-rot="z">⟳ Z 90°</button>
+        <button class="btn2" id="flat" data-t="flat"></button><button class="btn2" id="reset" data-t="reset"></button><button class="btn2" id="view" data-t="view"></button>
+      </div>
+      <p class="note" data-t="orbit"></p>
+    </div>
+    <div class="panel">
+      <div class="card"><h2 data-t="size"></h2><div class="fname" id="fname"></div><div id="sizes"></div><div id="fit" class="big"></div></div>
+      <div class="card"><h2 data-t="mat"></h2><div id="mat"></div></div>
+      <div class="card"><h2 data-t="time"></h2><div id="time"></div></div>
+      <div class="card"><h2 data-t="post"></h2><label class="row" style="justify-content:flex-start;gap:8px;cursor:pointer"><input type="checkbox" id="showSup" checked><span data-t="showSup"></span></label><div id="post" style="font-size:13px;line-height:1.4"></div></div>
+      <p class="note" data-t="disc"></p>
+      <a class="cta" id="go" aria-disabled="true" target="_blank" rel="noopener"><span data-t="go"></span><small id="goS"></small></a>
+    </div>
+  </div>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "./vendor/OrbitControls.js";
+
+// Print form link: empty until the 3D print form exists (step 12 open item).
+const CONFIG = { PRINT_FORM_URL: "" };
+const P = window.P1S, E = window.P1SEstimator;
+const T = {
+  title: ["Visor 3D", "3D viewer"], sub: ["Impresión 3D · Bambu Lab P1S", "3D printing · Bambu Lab P1S"],
+  pick: ["Elige tu archivo", "Choose your file"], pickSub: ["STL, OBJ o STEP. No se sube: se abre solo en este dispositivo.", "STL, OBJ or STEP. Not uploaded: it only opens on this device."],
+  empty: ["Elige un archivo para verlo sobre la cama de la P1S (256 × 256 × 250 mm).", "Choose a file to see it on the P1S plate (256 × 256 × 250 mm)."],
+  flat: ["Apoyar cara plana", "Lay flat"], reset: ["Restablecer", "Reset"], view: ["Centrar vista", "Reset view"],
+  orbit: ["Arrastra para girar la vista, rueda o pellizco para zoom. En rojo: zonas que necesitan soportes. En gris: soportes (aproximados).", "Drag to orbit, wheel or pinch to zoom. Red: areas that need supports. Grey: supports (approximate)."],
+  size: ["Tamaño", "Size"], mat: ["Material (PLA)", "Material (PLA)"], time: ["Tiempo", "Time"],
+  fits: ["✓ Cabe en la P1S", "✓ Fits the P1S"], nofit: ["✗ No cabe: gíralo o escálalo", "✗ Doesn't fit: rotate or scale it"],
+  model: ["Pieza", "Part"], sup: ["Soportes (árbol)", "Supports (tree)"], total: ["Total", "Total"], len: ["Filamento", "Filament"],
+  ritual: ["Preparación P1S (calentar, nivelar, calibrar)", "P1S start (heat, level, calibrate)"], print: ["Impresión", "Printing"],
+  disc: ["Estimación aproximada (0,4 mm, 0,20 mm, 2 perímetros, 10 % gyroid, soportes en árbol). OrcaSlicer o Bambu Studio dan el valor exacto.", "Rough estimate (0.4 mm, 0.20 mm, 2 walls, 10% gyroid, tree supports). OrcaSlicer or Bambu Studio give the exact value."],
+  go: ["Abrir formulario de impresión", "Open print form"], goNo: ["Primero un archivo que quepa", "First a file that fits"], goSoon: ["Disponible pronto", "Available soon"], goOk: ["Se abre en otra pestaña: sube el mismo archivo", "Opens in a new tab: upload the same file"],
+  err: ["No se pudo leer el archivo", "Couldn't read the file"],
+  post: ["Soportes y acabado", "Supports and finishing"], showSup: ["Ver soportes", "Show supports"],
+  noSup: ["Sin soportes: la pieza sale limpia, sin repaso.", "No supports: the part comes out clean, no cleanup."],
+  lvl: [["Poco repaso", "Repaso medio", "Mucho repaso"], ["Little cleanup", "Some cleanup", "A lot of cleanup"]],
+  postTxt: ["Los soportes tocan unos {a} cm² de la pieza (en rojo). Al quitarlos quedan marcas: repásalas con cúter o lija. Prueba a girar la pieza para reducirlas.", "Supports touch about {a} cm² of the part (red). Removing them leaves marks: clean them up with a craft knife or sandpaper. Try rotating the part to reduce them."],
+};
+let lang = (navigator.language || "es").startsWith("en") ? "en" : "es"; try { lang = localStorage.getItem("eset_lang") || lang; } catch (e) {}
+// Inside the main site (index.html, Impresión 3D tab): ?embed=1 hides this page's own title bar and language switch; ?lang= follows the site.
+const QS = new URLSearchParams(location.search); if (QS.get("lang") === "es" || QS.get("lang") === "en") lang = QS.get("lang");
+if (QS.has("embed")) { document.querySelector(".v3 > .top").style.display = "none"; document.body.style.cssText += ";padding:0;background:transparent"; document.querySelector(".v3").style.maxWidth = "none"; }
+const t = k => T[k][lang === "en" ? 1 : 0], $ = id => document.getElementById(id), n1 = v => v.toFixed(1).replace(".", lang === "en" ? "." : ",");
+
+// ---- Scene (Z up, plate 0..256) ----
+const cv = $("cv"), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 1, 5000); cam.up.set(0, 0, 1);
+const ctl = new OrbitControls(cam, cv); ctl.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(200, -150, 400); scene.add(sun);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const plate = new THREE.Mesh(new THREE.PlaneGeometry(P.bed.x, P.bed.y), new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: .9 }));
+plate.position.set(P.bed.x / 2, P.bed.y / 2, -0.01); scene.add(plate);
+const grid = new THREE.GridHelper(P.bed.x, 16, 0x555b66, 0x3a3f48); grid.rotation.x = Math.PI / 2; grid.position.set(P.bed.x / 2, P.bed.y / 2, 0); scene.add(grid);
+const vol = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(P.bed.x, P.bed.y, P.bed.z)), new THREE.LineBasicMaterial({ color: 0x8a94a6, transparent: true, opacity: .5 }));
+vol.position.set(P.bed.x / 2, P.bed.y / 2, P.bed.z / 2); scene.add(vol);
+let mesh = null, orig = null, pos = null, fileName = "";
+function homeView() { cam.position.set(P.bed.x / 2 + 260, -220, 260); ctl.target.set(P.bed.x / 2, P.bed.y / 2, 40); ctl.update(); }
+function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(cv.parentElement); homeView();
+renderer.setAnimationLoop(() => { ctl.update(); renderer.render(scene, cam); });
+
+// ---- Mesh handling ----
+function place(p) {                                  // centre on the plate, bottom at z = 0
+  const b = E.bounds(p), dx = P.bed.x / 2 - (b.min[0] + b.max[0]) / 2, dy = P.bed.y / 2 - (b.min[1] + b.max[1]) / 2, dz = -b.min[2];
+  for (let i = 0; i < p.length; i += 3) { p[i] += dx; p[i + 1] += dy; p[i + 2] += dz; } return p;
+}
+function rotate(p, ax, ay, az, ang) {                // Rodrigues rotation about a unit axis
+  const c = Math.cos(ang), s = Math.sin(ang), k = 1 - c;
+  const R = [c + ax*ax*k, ax*ay*k - az*s, ax*az*k + ay*s, ay*ax*k + az*s, c + ay*ay*k, ay*az*k - ax*s, az*ax*k - ay*s, az*ay*k + ax*s, c + az*az*k];
+  for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i + 1], z = p[i + 2];
+    p[i] = R[0]*x + R[1]*y + R[2]*z; p[i + 1] = R[3]*x + R[4]*y + R[5]*z; p[i + 2] = R[6]*x + R[7]*y + R[8]*z; }
+  return place(p);
+}
+function layFlat() {                                 // biggest set of faces sharing a normal goes down
+  const acc = new Map(), flip = E.measure(pos).flip ? -1 : 1;
+  for (let i = 0; i < pos.length; i += 9) {
+    const bx = pos[i+3]-pos[i], by = pos[i+4]-pos[i+1], bz = pos[i+5]-pos[i+2], cx = pos[i+6]-pos[i], cy = pos[i+7]-pos[i+1], cz = pos[i+8]-pos[i+2];
+    let nx = by*cz - bz*cy, ny = bz*cx - bx*cz, nz = bx*cy - by*cx; const l = Math.hypot(nx, ny, nz); if (!l) continue;
+    nx *= flip / l; ny *= flip / l; nz *= flip / l;
+    const key = [nx, ny, nz].map(v => Math.round(v * 50)).join(","), a = acc.get(key) || { a: 0, n: [nx, ny, nz] }; a.a += l / 2; acc.set(key, a);
+  }
+  let best = null; for (const v of acc.values()) if (!best || v.a > best.a) best = v;
+  if (!best) return;
+  const [nx, ny, nz] = best.n, ang = Math.acos(Math.max(-1, Math.min(1, -nz)));      // turn n onto (0,0,-1)
+  if (ang < 1e-6) return; let ax = -ny, ay = nx, al = Math.hypot(ax, ay);               // axis = n × (0,0,-1)
+  if (al < 1e-9) { ax = 1; ay = 0; al = 1; }
+  rotate(pos, ax / al, ay / al, 0, ang);
+}
+function draw() {
+  if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const col = new Float32Array(pos.length), cos = Math.cos(P.support.thresholdDeg * Math.PI / 180), flip = E.measure(pos).flip ? -1 : 1;
+  const base = new THREE.Color(css("--accent") || "#e3a300"), red = new THREE.Color("#e5484d");
+  for (let i = 0; i < pos.length; i += 9) {
+    const bx = pos[i+3]-pos[i], by = pos[i+4]-pos[i+1], bz = pos[i+5]-pos[i+2], cx = pos[i+6]-pos[i], cy = pos[i+7]-pos[i+1], cz = pos[i+8]-pos[i+2];
+    const nx = by*cz - bz*cy, ny = bz*cx - bx*cz, nz = (bx*cy - by*cx) * flip, l = Math.hypot(nx, ny, nz);
+    const over = l && nz / l < -cos && Math.min(pos[i+2], pos[i+5], pos[i+8]) > P.layer, c = over ? red : base;
+    for (let k = 0; k < 9; k += 3) { col[i + k] = c.r; col[i + k + 1] = c.g; col[i + k + 2] = c.b; }
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+  mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .6, metalness: 0, side: THREE.DoubleSide }));
+  scene.add(mesh); update();
+}
+let last = null, supMesh = null;
+function drawSupports(r) {                           // tree branches, thin tip at the part, thicker at the base (approximate)
+  if (supMesh) { scene.remove(supMesh); supMesh.geometry.dispose(); supMesh = null; }
+  const tp = (r && r.support.tips) || [], n = tp.length / 4; if (!n || !$("showSup").checked) return;
+  const geo = new THREE.CylinderGeometry(0.35, 1.0, 1, 8, 1); geo.rotateX(Math.PI / 2); geo.translate(0, 0, 0.5);
+  supMesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xb8c0cc, transparent: true, opacity: .6, roughness: .8 }), n);
+  const M = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) { const h = Math.max(0.01, tp[i*4+3] - tp[i*4+2]); M.makeScale(1, 1, h); M.setPosition(tp[i*4], tp[i*4+1], tp[i*4+2]); supMesh.setMatrixAt(i, M); }
+  scene.add(supMesh);
+}
+function update() {
+  document.querySelectorAll(".tools .btn2").forEach(b => b.disabled = !pos);
+  $("empty").hidden = !!pos;
+  if (!pos) { drawSupports(null); $("post").innerHTML = ""; $("sizes").innerHTML = $("mat").innerHTML = $("time").innerHTML = $("fit").textContent = $("fname").textContent = ""; return goBtn(false); }
+  const r = E.estimate({ pos }), tm = E.estimateTime({ pos }, r), lim = [P.bed.x, P.bed.y, P.bed.z]; last = r;
+  $("fname").textContent = fileName;
+  $("sizes").innerHTML = ["X", "Y", "Z"].map((a, i) => `<div class="row"><span>${a}</span><b class="${r.size[i] <= lim[i] ? "ok" : "bad"}">${n1(r.size[i])} / ${lim[i]} mm</b></div>`).join("");
+  $("fit").textContent = t(r.fits ? "fits" : "nofit"); $("fit").className = "big " + (r.fits ? "ok" : "bad");
+  $("mat").innerHTML = `<div class="row"><span>${t("model")}</span><b>${n1(r.grams.model)} g</b></div>
+    <div class="row"><span>${t("sup")}</span><b>${n1(r.grams.supports)} g</b></div>
+    <div class="row"><span><strong>${t("total")}</strong></span><b>${n1(r.grams.total)} g</b></div>
+    <div class="row"><span>${t("len")}</span><b>${n1(r.metres)} m</b></div>`;
+  $("time").innerHTML = `<div class="big">${tm.text}</div>
+    <div class="row"><span>${t("ritual")}</span><b>${E.fmt(tm.seconds.ritual)}</b></div>
+    <div class="row"><span>${t("print")}</span><b>${tm.printText}</b></div>`;
+  const a = r.support.interfaceArea / 100, L = T.lvl[lang === "en" ? 1 : 0];
+  $("post").innerHTML = r.support.needed ? `<b>${L[a < 2 ? 0 : a < 10 ? 1 : 2]}</b><br>${t("postTxt").replace("{a}", n1(a))}` : t("noSup");
+  drawSupports(r);
+  goBtn(r.fits);
+}
+function goBtn(fits) {
+  const go = $("go"), ok = fits && !!CONFIG.PRINT_FORM_URL;
+  go.setAttribute("aria-disabled", ok ? "false" : "true");
+  if (ok) go.href = CONFIG.PRINT_FORM_URL; else go.removeAttribute("href");
+  $("goS").textContent = !fits ? t("goNo") : CONFIG.PRINT_FORM_URL ? t("goOk") : t("goSoon");
+}
+function texts() {
+  document.documentElement.lang = lang; $("tT").textContent = t("title"); $("tS").textContent = t("sub");
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === lang));
+  update();
+}
+
+// ---- Events ----
+$("file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const m = await E.parseFile(f.name, await f.arrayBuffer()); if (!m.pos.length) throw new Error("empty");
+    orig = new Float32Array(m.pos); pos = place(new Float32Array(orig)); fileName = f.name; draw(); homeView(); }
+  catch (err) { alert(t("err") + ": " + (err.message || err)); }
+};
+document.querySelectorAll("[data-rot]").forEach(b => b.onclick = () => { if (!pos) return; const a = b.dataset.rot;
+  rotate(pos, a === "x" ? 1 : 0, a === "y" ? 1 : 0, a === "z" ? 1 : 0, Math.PI / 2); draw(); });
+$("flat").onclick = () => { if (pos) { layFlat(); draw(); } };
+$("reset").onclick = () => { if (orig) { pos = place(new Float32Array(orig)); draw(); homeView(); } };
+$("view").onclick = homeView;
+$("showSup").onchange = () => drawSupports(last);
+document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { lang = b.dataset.l; try { localStorage.setItem("eset_lang", lang); } catch (e) {} texts(); });
+$("go").onclick = e => { if ($("go").getAttribute("aria-disabled") === "true") e.preventDefault(); };
+texts();
+</script>
+</body>
+</html>
