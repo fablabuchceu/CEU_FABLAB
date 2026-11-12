@@ -71,6 +71,14 @@ button{font:inherit;color:inherit}
 .act b{display:block;font:700 19px/1.1 var(--f-display)}
 .act span{display:block;font-size:13px;opacity:.75}
 .act .ch{width:18px;height:18px;opacity:.6;flex:none}
+/* Slim action: half-height, high-contrast (accent fill). "¿Primera vez?" on Láser, "Abrir en pantalla completa" under the manual. */
+.act.slim{padding:8px 12px;gap:10px;border-radius:12px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);text-decoration:none}
+.act.slim .ic{opacity:1;width:26px;height:26px;border-radius:8px;font-size:14px;background:var(--accent-ink);color:var(--accent)}
+.act.slim b{font-size:15px}
+.act.slim .ch{width:16px;height:16px;opacity:.85}
+.act.slim:hover{filter:brightness(1.06)}
+.act.slim:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.rfoot .act.slim{flex:1}
 .doc{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;border:1.5px dashed var(--accent);background:var(--accent-soft);text-decoration:none}
 .doc .ic{width:40px;height:48px;border-radius:6px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font:700 10px var(--f-mono);color:var(--closed);flex:none}
 .doc div{flex:1;min-width:0}

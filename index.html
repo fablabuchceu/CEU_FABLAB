@@ -155,7 +155,7 @@ const CONFIG = {
   function rulesPanel() {
     return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
       <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
-      <div class="rfoot"><a href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener">↗ ${L("Abrir en pantalla completa", "Open full screen")}</a></div>
+      <div class="rfoot"><a class="act slim" href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>
       <div class="rmat">${matImg()}</div></section>`;
   }
 
@@ -323,7 +323,7 @@ const CONFIG = {
       <div class="actions">
         <button class="act primary" id="aBook"><span class="ic" aria-hidden="true">📅</span><div><b>${L("Solicitar cita", "Book")}</b><span>${L("Ver horas libres y reservar", "See free hours and book")}</span></div><span class="ch">${I.next}</span></button>
       </div>
-      ${user ? "" : `<p class="note">${L("¿Primera vez? Crea tu cuenta en <a href=\"#inicio\" data-nav=\"home\">Inicio</a>.", "First time? Create your account on <a href=\"#inicio\" data-nav=\"home\">Home</a>.")}</p>`}
+      ${user ? "" : `<a class="act slim" href="#inicio" data-nav="home"><span class="ic" aria-hidden="true">👤</span><div><b>${L("¿Primera vez? Crea tu cuenta en Inicio", "First time? Create your account on Home")}</b></div><span class="ch">${I.next}</span></a>`}
       ${docCard()}
       ${matImg()}
       ${user ? "" : saveCard()}
