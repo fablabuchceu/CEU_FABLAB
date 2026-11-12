@@ -90,6 +90,10 @@ const CONFIG = {
   // Impresión 3D tab ON/OFF switch. true = the 3D viewer (3d/visor.html: fit check, material, time, supports)
   // is shown in the Impresión 3D tab and the home tile works. false = "Próximamente" page, home tile greyed out.
   PRINT3D: true,
+  // 3D printing rules on the Crear cuenta step (only when PRINT3D is true; their tick box is required too).
+  // RULES3D_DOC = Canva public view link of the 3D rules; RULES3D_EMBED = the same + "?embed". Empty = short built-in rules list.
+  RULES3D_DOC: "",
+  RULES3D_EMBED: "",
 
   MACHINES: [ { id: "Fusion Edge 60W", short: "Fusion Edge", w: "60 W" }, { id: "Helix 50W", short: "Helix", w: "50 W" } ],
   DAYS_AHEAD: 30,
@@ -156,6 +160,20 @@ const CONFIG = {
   // Canva: the page can't see scrolling inside it, so there's no "read to the end" check; the tick boxes stay required.
   // Materials table (which materials can be cut), one image per language
   const matImg = () => `<img class="matimg" src="${L("materiales-es.jpg", "materials-en.jpg")}" alt="${L("Tabla de materiales que sí se cortan y que no se cortan. El PVC no entra en el láser nunca.", "Table of materials that can and cannot be cut. PVC never goes in the laser.")}" loading="lazy">`;
+  // 3D printing rules panel (Crear cuenta gate). Canva embed when CONFIG.RULES3D_EMBED is set, otherwise the basic rules below.
+  function rules3dPanel() {
+    const body = CONFIG.RULES3D_EMBED
+      ? `<div class="rbody canva"><iframe src="${esc(CONFIG.RULES3D_EMBED)}" title="${L("Normas de impresión 3D", "3D printing rules")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>`
+      : `<div class="rbody"><p class="note">${L("El documento de normas de impresión 3D aparecerá aquí. Mientras tanto, estas son las normas básicas:", "The 3D printing rules document will appear here. Meanwhile, these are the basic rules:")}</p><ul>
+        <li>${L("Solo PLA en la Bambu Lab P1S.", "PLA only on the Bambu Lab P1S.")}</li>
+        <li>${L("Comprueba tu archivo en el visor 3D antes de pedir la impresión (máx. 256 × 256 × 250 mm).", "Check your file in the 3D viewer before asking for the print (max 256 × 256 × 250 mm).")}</li>
+        <li>${L("Quédate a ver la primera capa: si no se pega a la cama, avisa al personal.", "Stay for the first layer: if it doesn't stick to the plate, tell the staff.")}</li>
+        <li>${L("No retires la pieza con la cama caliente; espera a que se enfríe.", "Don't remove the part while the plate is hot; wait until it cools down.")}</li>
+        <li>${L("Avisa de cualquier fallo o atasco al personal del taller; no abras ni ajustes la impresora.", "Report any failure or jam to the workshop staff; don't open or adjust the printer.")}</li>
+        <li>${L("Recoge tus piezas y retira los soportes fuera de la impresora.", "Collect your parts and remove the supports away from the printer.")}</li></ul></div>`;
+    const foot = CONFIG.RULES3D_DOC ? `<div class="rfoot"><a class="act slim" href="${esc(CONFIG.RULES3D_DOC)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>` : "";
+    return `<section class="rules" aria-labelledby="r3T"><div class="rhead"><b id="r3T">📄 ${L("Normas de impresión 3D", "3D printing rules")}</b></div>${body}${foot}</section>`;
+  }
   function rulesPanel() {
     return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
       <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
@@ -164,7 +182,7 @@ const CONFIG = {
   }
 
   // ---- State ----
-  const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, ack: false };
+  const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, readTick3d: false, ack: false };
   S.lang = initLang();
   // Direct links to a tab: index.html#inicio, #crear-cuenta, #laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
   const ROUTE = { inicio: "home", home: "home", "crear-cuenta": "gate", cuenta: "gate", "create-account": "gate", laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d" };
@@ -338,13 +356,15 @@ const CONFIG = {
     </div>`;
   }
   function vGate() {
-    const ok = S.readDone && S.readTick;
+    const need3d = !!CONFIG.PRINT3D, ok = S.readDone && S.readTick && (!need3d || S.readTick3d);
     return topbar(L("Crear cuenta", "Create account"), L("Paso 1: reglamento", "Step 1: rules"), true) + `<div class="scr">
-      <p class="note">${L("📄 Lee el reglamento y mira los vídeos. Después marca la casilla y crea tu cuenta.", "📄 Read the rules and watch the videos. Then tick the box and create your account.")}</p>
+      <p class="note">${need3d ? L("📄 Lee el reglamento del láser y las normas de impresión 3D. Después marca las dos casillas y crea tu cuenta.", "📄 Read the laser rules and the 3D printing rules. Then tick both boxes and create your account.") : L("📄 Lee el reglamento y mira los vídeos. Después marca la casilla y crea tu cuenta.", "📄 Read the rules and watch the videos. Then tick the box and create your account.")}</p>
       ${rulesPanel()}
+      ${need3d ? rules3dPanel() : ""}
       <div class="gate">
         <label class="chk" for="gTick"><input type="checkbox" id="gTick" ${S.readTick ? "checked" : ""} ${S.readDone ? "" : "disabled"}><span><b>${L("He leído el reglamento y lo cumpliré.", "I have read the rules and will follow them.")}</b></span></label>
-        <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>${L("Crear cuenta", "Create account")}<small>${ok ? L("Se abre el formulario", "Opens the form") : S.readDone ? L("Marca la casilla", "Tick the box") : L("Primero lee hasta el final", "Read to the end first")}</small></button>
+        ${need3d ? `<label class="chk" for="gTick3"><input type="checkbox" id="gTick3" ${S.readTick3d ? "checked" : ""}><span><b>${L("He leído las normas de impresión 3D y las cumpliré.", "I have read the 3D printing rules and will follow them.")}</b></span></label>` : ""}
+        <button class="cta" id="gGo" ${ok ? "" : 'aria-disabled="true"'}>${L("Crear cuenta", "Create account")}<small>${ok ? L("Se abre el formulario", "Opens the form") : S.readDone ? (need3d ? L("Marca las dos casillas", "Tick both boxes") : L("Marca la casilla", "Tick the box")) : L("Primero lee hasta el final", "Read to the end first")}</small></button>
       </div></div>`;
   }
   function vCal() {
@@ -410,11 +430,27 @@ const CONFIG = {
   }
 
   // ---- Render + events ----
+  // Two persistent containers (display:contents, so the layout is unchanged): #vw = rail + screen, #sh = the sheet.
+  // The sheet is only rebuilt when it changes (opened/closed/other hour), so a language switch never reloads the
+  // Crear cuenta / booking form and the student keeps what they typed. On the Impresión 3D tab only the rail and the
+  // top bar are rebuilt and the viewer is told the new language, so the loaded model stays.
+  let shownSheet = null, shownScreen = null;
+  function swapParts(host, html, sels) { const tmp = document.createElement("div"); tmp.innerHTML = html;
+    for (const q of sels) { const a = host.querySelector(q), b = tmp.querySelector(q); if (a && b) a.replaceWith(b); } }
   function render() {
     document.documentElement.lang = S.lang;
     document.title = L("Taller ESET - Reservas", "ESET Workshop - Bookings");
     const V = { home: vHome, laser: vLaser, gate: vGate, tut: vTut, print3d: vPrint3d, cal: vCal };
-    app.innerHTML = rail() + (V[S.screen] || vHome)() + vSheet();
+    if (!$("vw")) app.innerHTML = '<div id="vw" class="keep"></div><div id="sh" class="keep"></div>';
+    const vw = $("vw"), sh = $("sh"), v3old = $("v3");
+    if (S.screen === "print3d" && shownScreen === "print3d" && v3old && CONFIG.PRINT3D) {
+      swapParts(vw, rail() + vPrint3d(), [".rail", ".top"]);
+      try { v3old.contentWindow.postMessage({ type: "lang", lang: S.lang }, location.origin); } catch (e) {}
+    } else vw.innerHTML = rail() + (V[S.screen] || vHome)();
+    const sheetKey = S.sheet ? S.sheet + "|" + (S.slot ? S.slot.label : "") : "";
+    if (sheetKey !== shownSheet || !sheetKey) sh.innerHTML = vSheet();
+    else swapParts(sh, vSheet(), [".shead", ".sfoot"]);   // same sheet open: new texts, same form iframe
+    shownSheet = sheetKey; shownScreen = S.screen;
     app.classList.add("wide");   // every page uses the wide desktop layout (≥1000 px); phones unchanged
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
     on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : "home"; render(); window.scrollTo(0, 0); });
@@ -423,15 +459,16 @@ const CONFIG = {
     app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
     on("out", () => { store.clear("eset_user"); user = null; S.sheet = false; S.screen = "home"; render(); });
     on("tPrint", () => { S.screen = "print3d"; render(); window.scrollTo(0, 0); });
-    const v3 = $("v3"); if (v3) v3.onload = () => { try { const d = v3.contentDocument, fit = () => v3.style.height = d.documentElement.scrollHeight + "px"; fit(); new ResizeObserver(fit).observe(d.body); } catch (e) {} };
+    const v3 = $("v3"); if (v3 && v3 !== v3old) v3.onload = () => { try { const d = v3.contentDocument, fit = () => v3.style.height = d.documentElement.scrollHeight + "px"; fit(); new ResizeObserver(fit).observe(d.body); } catch (e) {} };
     on("tLaser", () => { S.screen = user ? "cal" : "laser"; if (S.screen === "cal" && !S.records && !S.loading) load(); else render(); });
     on("aBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); });
     on("retry", load);
     on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
     on("aCreate", () => { S.screen = "gate"; render(); window.scrollTo(0, 0); });
-    on("gGo", () => { if (!(S.readDone && S.readTick)) return; S.sheet = "create"; render(); });
+    on("gGo", () => { if (!(S.readDone && S.readTick && (!CONFIG.PRINT3D || S.readTick3d))) return; S.sheet = "create"; render(); });
     const ack = $("ack"); if (ack) ack.onchange = () => { S.ack = ack.checked; try { sessionStorage.setItem("eset_ack", S.ack ? "1" : "0"); } catch(e) {} render(); };
     const gt = $("gTick"); if (gt) gt.onchange = () => { S.readTick = gt.checked; render(); };
+    const gt3 = $("gTick3"); if (gt3) gt3.onchange = () => { S.readTick3d = gt3.checked; render(); };
     app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { if (S.lang === b.dataset.l) return; S.lang = b.dataset.l; try { localStorage.setItem("eset_lang", S.lang); } catch(e) {} const y = window.scrollY; render(); window.scrollTo(0, y); });
     const rend = $("rend");
     if (rend && !S.readDone && "IntersectionObserver" in window) {

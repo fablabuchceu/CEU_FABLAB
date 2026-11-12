@@ -225,3 +225,6 @@ button{font:inherit;color:inherit}
 /* Desktop: wider, less scrolling (12 Nov). .two = two columns on the Láser page; tiles side by side. */
 .two{display:grid;gap:16px;align-content:start}.two>.col{display:grid;gap:16px;align-content:start;min-width:0}
 @media (min-width:1000px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}.app.wide .tiles{grid-template-columns:1fr 1fr}.app.wide .banner{aspect-ratio:3/1}.app.wide .tile .pic{aspect-ratio:21/9}}
+/* index.html render containers (#vw screen, #sh sheet): no box of their own, layout as before */
+.keep{display:contents}
+.rules ul{margin:6px 0 0;padding-left:20px;display:grid;gap:4px}

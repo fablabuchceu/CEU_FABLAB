@@ -31,6 +31,9 @@
   .big{font:700 28px/1 var(--f-display)}
   .fname{font-size:13px;color:var(--muted);word-break:break-all}
   a.cta{display:block;text-decoration:none}
+  .pick.drop,.stage.drop{outline:3px dashed var(--accent);outline-offset:3px;background:var(--accent-soft)}
+  body.dragging .stage .empty{color:var(--ink);font-weight:600}
+  .otick{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
 </style>
 <script src="p1s-settings.js"></script>
 <script src="vendor/occt/occt-import-js.js"></script>
@@ -58,6 +61,7 @@
       <div class="card"><h2 data-t="time"></h2><div id="time"></div></div>
       <div class="card"><h2 data-t="post"></h2><label class="row" style="justify-content:flex-start;gap:8px;cursor:pointer"><input type="checkbox" id="showSup" checked><span data-t="showSup"></span></label><div id="post" style="font-size:13px;line-height:1.4"></div></div>
       <p class="note" data-t="disc"></p>
+      <label class="otick" for="sendRot"><input type="checkbox" id="sendRot"><span data-t="sendRot"></span></label>
       <a class="cta" id="go" aria-disabled="true" target="_blank" rel="noopener"><span data-t="go"></span><small id="goS"></small></a>
     </div>
   </div>
@@ -66,12 +70,18 @@
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 
-// Print form link: empty until the 3D print form exists (step 12 open item).
-const CONFIG = { PRINT_FORM_URL: "" };
+// Print form link + autofill: empty until the 3D print form and its fields exist (step 12 open item).
+// PREFILL: the Airtable form field names (exact text) to fill from this page. Empty name = not sent.
+// The file name is prefilled VISIBLE (the student can change it); the others are prefilled and hidden (text/number fields only,
+// never a linked-record field). The orientation is only sent when the student ticks "Enviar la orientación al formulario".
+const CONFIG = {
+  PRINT_FORM_URL: "",
+  PREFILL: { file: "", orientation: "", grams: "", supportGrams: "", time: "", size: "" },
+};
 const P = window.P1S, E = window.P1SEstimator;
 const T = {
   title: ["Visor 3D", "3D viewer"], sub: ["Impresión 3D · Bambu Lab P1S", "3D printing · Bambu Lab P1S"],
-  pick: ["Elige tu archivo", "Choose your file"], pickSub: ["STL, OBJ o STEP. No se sube: se abre solo en este dispositivo.", "STL, OBJ or STEP. Not uploaded: it only opens on this device."],
+  pick: ["Arrastra el archivo aquí o elige uno", "Drag the file here or choose one"], pickSub: ["STL, OBJ o STEP. No se sube: se abre solo en este dispositivo.", "STL, OBJ or STEP. Not uploaded: it only opens on this device."],
   empty: ["Elige un archivo para verlo sobre la cama de la P1S (256 × 256 × 250 mm).", "Choose a file to see it on the P1S plate (256 × 256 × 250 mm)."],
   flat: ["Apoyar cara plana", "Lay flat"], reset: ["Restablecer", "Reset"], view: ["Centrar vista", "Reset view"],
   orbit: ["Arrastra para girar la vista, rueda o pellizco para zoom. En rojo: zonas que necesitan soportes. En gris: soportes (aproximados).", "Drag to orbit, wheel or pinch to zoom. Red: areas that need supports. Grey: supports (approximate)."],
@@ -82,6 +92,8 @@ const T = {
   disc: ["Estimación aproximada (0,4 mm, 0,20 mm, 2 perímetros, 10 % gyroid, soportes en árbol). OrcaSlicer o Bambu Studio dan el valor exacto.", "Rough estimate (0.4 mm, 0.20 mm, 2 walls, 10% gyroid, tree supports). OrcaSlicer or Bambu Studio give the exact value."],
   go: ["Abrir formulario de impresión", "Open print form"], goNo: ["Primero un archivo que quepa", "First a file that fits"], goSoon: ["Disponible pronto", "Available soon"], goOk: ["Se abre en otra pestaña: sube el mismo archivo", "Opens in a new tab: upload the same file"],
   err: ["No se pudo leer el archivo", "Couldn't read the file"],
+  sendRot: ["Enviar la orientación al formulario (opcional)", "Send the orientation to the form (optional)"],
+  dropHere: ["Suelta el archivo para abrirlo", "Drop the file to open it"],
   post: ["Soportes y acabado", "Supports and finishing"], showSup: ["Ver soportes", "Show supports"],
   noSup: ["Sin soportes: la pieza sale limpia, sin repaso.", "No supports: the part comes out clean, no cleanup."],
   lvl: [["Poco repaso", "Repaso medio", "Mucho repaso"], ["Little cleanup", "Some cleanup", "A lot of cleanup"]],
@@ -105,7 +117,8 @@ plate.position.set(P.bed.x / 2, P.bed.y / 2, -0.01); scene.add(plate);
 const grid = new THREE.GridHelper(P.bed.x, 16, 0x555b66, 0x3a3f48); grid.rotation.x = Math.PI / 2; grid.position.set(P.bed.x / 2, P.bed.y / 2, 0); scene.add(grid);
 const vol = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(P.bed.x, P.bed.y, P.bed.z)), new THREE.LineBasicMaterial({ color: 0x8a94a6, transparent: true, opacity: .5 }));
 vol.position.set(P.bed.x / 2, P.bed.y / 2, P.bed.z / 2); scene.add(vol);
-let mesh = null, orig = null, pos = null, fileName = "";
+let mesh = null, orig = null, pos = null, fileName = "", rot = { x: 0, y: 0, z: 0, flat: false };
+const rotText = () => (rot.flat ? "flat " : "") + "X" + rot.x + " Y" + rot.y + " Z" + rot.z;
 function homeView() { cam.position.set(P.bed.x / 2 + 260, -220, 260); ctl.target.set(P.bed.x / 2, P.bed.y / 2, 40); ctl.update(); }
 function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(cv.parentElement); homeView();
@@ -166,8 +179,8 @@ function drawSupports(r) {                           // tree branches, thin tip 
 function update() {
   document.querySelectorAll(".tools .btn2").forEach(b => b.disabled = !pos);
   $("empty").hidden = !!pos;
-  if (!pos) { drawSupports(null); $("post").innerHTML = ""; $("sizes").innerHTML = $("mat").innerHTML = $("time").innerHTML = $("fit").textContent = $("fname").textContent = ""; return goBtn(false); }
-  const r = E.estimate({ pos }), tm = E.estimateTime({ pos }, r), lim = [P.bed.x, P.bed.y, P.bed.z]; last = r;
+  if (!pos) { last = lastTime = null; drawSupports(null); $("post").innerHTML = ""; $("sizes").innerHTML = $("mat").innerHTML = $("time").innerHTML = $("fit").textContent = $("fname").textContent = ""; return goBtn(false); }
+  const r = E.estimate({ pos }), tm = E.estimateTime({ pos }, r), lim = [P.bed.x, P.bed.y, P.bed.z]; last = r; lastTime = tm;
   $("fname").textContent = fileName;
   $("sizes").innerHTML = ["X", "Y", "Z"].map((a, i) => `<div class="row"><span>${a}</span><b class="${r.size[i] <= lim[i] ? "ok" : "bad"}">${n1(r.size[i])} / ${lim[i]} mm</b></div>`).join("");
   $("fit").textContent = t(r.fits ? "fits" : "nofit"); $("fit").className = "big " + (r.fits ? "ok" : "bad");
@@ -183,10 +196,22 @@ function update() {
   drawSupports(r);
   goBtn(r.fits);
 }
+let lastTime = null;
+const enc = encodeURIComponent, key = k => enc(k).replace(/%20/g, "+");
+function formLink() {                                // PRINT_FORM_URL + prefill_<field>=<value> (hide_ all but the file name)
+  const F = CONFIG.PREFILL || {}, r = last, p = [];
+  const add = (k, v, show) => { if (!F[k] || v == null || v === "") return; p.push("prefill_" + key(F[k]) + "=" + enc(v) + (show ? "" : "&hide_" + key(F[k]) + "=true")); };
+  add("file", fileName, true);
+  if ($("sendRot").checked) add("orientation", rotText());
+  if (r) { add("grams", r.grams.total.toFixed(1)); add("supportGrams", r.grams.supports.toFixed(1));
+    add("size", r.size.map(v => v.toFixed(1)).join("×") + " mm"); }
+  if (lastTime) add("time", String(Math.round(lastTime.seconds.total / 60)));
+  return CONFIG.PRINT_FORM_URL + (p.length ? (CONFIG.PRINT_FORM_URL.includes("?") ? "&" : "?") + p.join("&") : "");
+}
 function goBtn(fits) {
   const go = $("go"), ok = fits && !!CONFIG.PRINT_FORM_URL;
   go.setAttribute("aria-disabled", ok ? "false" : "true");
-  if (ok) go.href = CONFIG.PRINT_FORM_URL; else go.removeAttribute("href");
+  if (ok) go.href = formLink(); else go.removeAttribute("href");
   $("goS").textContent = !fits ? t("goNo") : CONFIG.PRINT_FORM_URL ? t("goOk") : t("goSoon");
 }
 function texts() {
@@ -197,18 +222,31 @@ function texts() {
 }
 
 // ---- Events ----
-$("file").onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
+async function loadFile(f) {
+  if (!f) return;
   try { const m = await E.parseFile(f.name, await f.arrayBuffer()); if (!m.pos.length) throw new Error("empty");
-    orig = new Float32Array(m.pos); pos = place(new Float32Array(orig)); fileName = f.name; draw(); homeView(); }
+    orig = new Float32Array(m.pos); pos = place(new Float32Array(orig)); fileName = f.name; rot = { x: 0, y: 0, z: 0, flat: false }; draw(); homeView(); }
   catch (err) { alert(t("err") + ": " + (err.message || err)); }
-};
+}
+$("file").onchange = e => { loadFile(e.target.files[0]); e.target.value = ""; };
+// Drag and drop: anywhere on the page; the pick box and the plate light up while a file is dragged over.
+let dragN = 0;
+const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files");
+const dragUI = on => { document.body.classList.toggle("dragging", on); document.querySelector(".pick").classList.toggle("drop", on); document.querySelector(".stage").classList.toggle("drop", on);
+  $("empty").textContent = t(on ? "dropHere" : "empty"); $("empty").hidden = !!pos && !on; };
+addEventListener("dragenter", e => { if (!hasFiles(e)) return; e.preventDefault(); if (dragN++ === 0) dragUI(true); });
+addEventListener("dragover", e => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+addEventListener("dragleave", e => { if (!hasFiles(e)) return; if (--dragN <= 0) { dragN = 0; dragUI(false); } });
+addEventListener("drop", e => { if (!hasFiles(e)) return; e.preventDefault(); dragN = 0; dragUI(false); loadFile(e.dataTransfer.files[0]); });
 document.querySelectorAll("[data-rot]").forEach(b => b.onclick = () => { if (!pos) return; const a = b.dataset.rot;
-  rotate(pos, a === "x" ? 1 : 0, a === "y" ? 1 : 0, a === "z" ? 1 : 0, Math.PI / 2); draw(); });
-$("flat").onclick = () => { if (pos) { layFlat(); draw(); } };
-$("reset").onclick = () => { if (orig) { pos = place(new Float32Array(orig)); draw(); homeView(); } };
+  rotate(pos, a === "x" ? 1 : 0, a === "y" ? 1 : 0, a === "z" ? 1 : 0, Math.PI / 2); rot[a] = (rot[a] + 90) % 360; draw(); });
+$("flat").onclick = () => { if (pos) { layFlat(); rot = { x: 0, y: 0, z: 0, flat: true }; draw(); } };
+$("reset").onclick = () => { if (orig) { pos = place(new Float32Array(orig)); rot = { x: 0, y: 0, z: 0, flat: false }; draw(); homeView(); } };
+$("sendRot").onchange = () => goBtn(!!(last && last.fits));
 $("view").onclick = homeView;
 $("showSup").onchange = () => drawSupports(last);
+addEventListener("message", e => { if (e.origin !== location.origin) return; const d = e.data || {};
+  if (d.type === "lang" && (d.lang === "es" || d.lang === "en") && d.lang !== lang) { lang = d.lang; texts(); } });
 document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { lang = b.dataset.l; try { localStorage.setItem("eset_lang", lang); } catch (e) {} texts(); });
 $("go").onclick = e => { if ($("go").getAttribute("aria-disabled") === "true") e.preventDefault(); };
 texts();
