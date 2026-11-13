@@ -74,6 +74,10 @@ const CONFIG = {
   CANCEL_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagPvXUS8hYoHCP4J/form",
   HOURS_URL:  "https://airtable.com/appeQ6gkuiJAq7wiT/pagKr3hOks4XqRsmD/form",
   CALENDAR_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/shrvGOhBZWWmbCsk3",
+  // Mis citas tab: synced table "Website my bookings - do not delete" in the public base (Status = Booked only, no names).
+  // Read with the same TOKEN, filtered by the student's Web Key (k in the personal link).
+  MINE_TABLE: "tblwMYJ3adiynOcDT",
+  MINE_FIELDS: { label: "Reservation", start: "Slot Start", id: "Record ID", machine: "Machine", key: "Student Web Key" },
   // Reglamento y uso: Canva design, public view link (replaced reglamento.pdf on 2026-11-11). It includes the tutorial videos.
   // RULES_EMBED = the same view link + "?embed". Shown beside the calendar, on the Crear cuenta step and in the Tutoriales tab.
   RULES_DOC:   "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view",
@@ -132,12 +136,16 @@ const CONFIG = {
                   set(k,v,remember){ try { sessionStorage.setItem(k,v); if (remember) localStorage.setItem(k,v); else localStorage.removeItem(k); } catch(e){} },
                   clear(k){ try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch(e){} } };
   let user = null;
+  const HASH0 = location.hash.slice(1);   // read before readLink() strips the hash (e.g. #mis-citas&e=…&p=…&c=…&k=…)
   (function readLink(){
     const h = new URLSearchParams(location.hash.slice(1));
     const e = (h.get("e") || "").trim(), p = (h.get("p") || "").trim(), c = (h.get("c") || "").trim();
+    // k = the student's Web Key (Students record id), only in personal links: used by the Mis citas tab.
+    const k0 = (h.get("k") || "").trim(), k = /^rec[A-Za-z0-9]{14}$/.test(k0) ? k0 : "";
     if (e && /^\d{4}$/.test(p)) {
-      user = { e, p, c };
-      store.set("eset_user", JSON.stringify(user), false);
+      user = { e, p, c, k };
+      let keep = false; try { keep = !!localStorage.getItem("eset_user"); } catch(err) {}
+      store.set("eset_user", JSON.stringify(user), keep);   // Recordarme already on: keep remembering, with the new details
       try { history.replaceState(null, "", location.pathname + location.search); } catch(err) {}
     } else {
       try { const s = JSON.parse(store.get("eset_user") || "null"); if (s && s.e && s.p) user = s; } catch(err) {}
@@ -185,9 +193,10 @@ const CONFIG = {
   const S = { screen: "home", machine: CONFIG.MACHINES[1].id, day: null, month: null, slot: null, sheet: false, records: null, error: null, loading: false, lang: "es", readDone: true, readTick: false, readTick3d: false, ack: false };
   S.lang = initLang();
   // Direct links to a tab: index.html#inicio, #crear-cuenta, #laser, #tutoriales, #impresion3d (e.g. for a Teams Website tab)
-  const ROUTE = { inicio: "home", home: "home", "crear-cuenta": "gate", cuenta: "gate", "create-account": "gate", laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d" };
-  const r0 = location.hash.slice(1).toLowerCase(); if (ROUTE[r0]) S.screen = ROUTE[r0];
-  window.addEventListener("hashchange", () => { const r = ROUTE[location.hash.slice(1).toLowerCase()]; if (r) { S.sheet = false; S.screen = r; render(); window.scrollTo(0, 0); } });
+  const ROUTE = { inicio: "home", home: "home", "crear-cuenta": "gate", cuenta: "gate", "create-account": "gate", laser: "laser", tutoriales: "tut", tutorials: "tut", reglamento: "tut", rules: "tut", impresion3d: "print3d", "3d": "print3d", "mis-citas": "mis", "my-bookings": "mis" };
+  const route = h => decodeURIComponent(h.split("&")[0]).toLowerCase();
+  const r0 = route(HASH0); if (ROUTE[r0]) S.screen = ROUTE[r0];
+  window.addEventListener("hashchange", () => { const r = ROUTE[route(location.hash.slice(1))]; if (r) { S.sheet = false; S.screen = r; render(); window.scrollTo(0, 0); } });
   S.vid = null;
   try { S.ack = sessionStorage.getItem("eset_ack") === "1"; } catch(e) {}
 
@@ -241,6 +250,42 @@ const CONFIG = {
     render();
   }
 
+  // ---- Mis citas: the signed-in student's own bookings (synced table, filtered by Web Key) ----
+  S.mine = null; S.mineErr = null; S.mineLoading = false;
+  function demoMine() {   // demo mode: 3 example bookings, one starting in under 2 h
+    const r = demoRecords(), pick = [r[Math.min(5, r.length - 1)], r[Math.floor(r.length / 2)], r[r.length - 1]].filter(Boolean);
+    const soon = new Date(Date.now() + 75 * 60000), sm = mad(soon);
+    return [{ label: "Demo · " + pad(sm.h) + ":" + pad(sm.min) + " · " + CONFIG.MACHINES[0].id, start: soon, id: "recDemo0", machine: CONFIG.MACHINES[0].id }]
+      .concat(pick.map((x, i) => ({ label: x.label, start: x.start, id: "recDemo" + (i + 1), machine: x.machine })));
+  }
+  async function loadMineLive() {
+    const F = CONFIG.MINE_FIELDS, out = []; let offset = "";
+    for (let guard = 0; guard < 10; guard++) {
+      const q = new URLSearchParams({ pageSize: "100", filterByFormula: "FIND('" + user.k + "', {" + F.key + "} & '')" });
+      [F.label, F.start, F.id, F.machine, F.key].forEach(f => q.append("fields[]", f));
+      if (offset) q.set("offset", offset);
+      const r = await fetch("https://api.airtable.com/v0/" + enc(CONFIG.PUBLIC_BASE_ID) + "/" + enc(CONFIG.MINE_TABLE) + "?" + q, { headers: { Authorization: "Bearer " + CONFIG.TOKEN } });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      for (const rec of j.records || []) {
+        const f = rec.fields || {}, sv = norm(f[F.start]), start = sv ? new Date(sv) : null;
+        if (!start || isNaN(start) || norm(f[F.key]) !== user.k) continue;   // exact match only
+        out.push({ label: norm(f[F.label]), start, id: norm(f[F.id]), machine: norm(f[F.machine]) });
+      }
+      if (!j.offset) break; offset = j.offset;
+    }
+    return out;
+  }
+  async function loadMine() {
+    if (!user || !user.k) return;
+    S.mineLoading = true; S.mineErr = null; render();
+    try {
+      const all = DEMO ? demoMine() : await loadMineLive(), now = Date.now();
+      S.mine = all.filter(r => r.start.getTime() + 3600000 > now && /^rec/.test(r.id)).sort((a, b) => a.start - b.start);   // not finished yet
+    } catch (e) { S.mineErr = String(e.message || e); S.mine = null; }
+    S.mineLoading = false; render();
+  }
+
   // ---- Derived ----
   const mine = () => (S.records || []).filter(r => r.machine === S.machine);
   function dayKeys() { const set = new Set(); (S.records || []).forEach(r => set.add(mad(r.start).key)); return [...set].sort(); }
@@ -282,7 +327,9 @@ const CONFIG = {
   // (The cancel link keeps both hidden: it only exists for details that came from the email link, so the email is right.)
   const whoShowEmail = () => user ? pfShow(CONFIG.PREFILL.email, user.e) + "&" + pf(CONFIG.PREFILL.pin, user.p) : "";
   function bookQuery() { const p = [pf(CONFIG.PREFILL.machine, S.machine), pfShow(CONFIG.PREFILL.slot, S.slot.label)]; if (user) p.push(whoShowEmail()); return p.join("&"); }
-  const cancelLink = () => user && user.c ? CONFIG.CANCEL_URL + "?" + who() + "&prefill_Entered+Code=" + enc(user.c) + "&hide_Entered+Code=true" : null;
+  const cancelLink = () => user && user.c ? CONFIG.CANCEL_URL + "?" + who() + "&prefill_Entered+Code=" + enc(user.c) + "&hide_Entered+Code=true&hide_Booking+Code=true" : null;
+  // Mis citas: cancel ONE booking. Email, PIN, Code and Booking Code (the booking's record id) hidden; Booking Slot visible.
+  const cancelQuery = r => who() + "&prefill_Entered+Code=" + enc(user.c) + "&hide_Entered+Code=true&prefill_Booking+Code=" + enc(r.id) + "&hide_Booking+Code=true&" + pfShow("Booking Slot", r.label);
   const hoursLink = () => user ? CONFIG.HOURS_URL + "?" + whoShowEmail() : CONFIG.HOURS_URL;
 
   // ---- Views ----
@@ -319,7 +366,8 @@ const CONFIG = {
     `<button data-nav="${k}" aria-current="${section() === k ? "page" : "false"}"><span aria-hidden="true">${ic}</span><b>${L(es, en)}</b></button>`).join("")}</nav>`;
   const laserTabs = () => `<div class="mseg" role="group" aria-label="${L("Corte láser", "Laser cutting")}">
       <button data-lt="laser" aria-pressed="${S.screen === "laser"}">📅 ${L("Reservas", "Bookings")}<small>${L("Reservar y cuenta", "Book and account")}</small></button>
-      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">📄 ${L("Reglamento y uso", "Rules and usage")}<small>${L("Manual y vídeos", "Manual and videos")}</small></button></div>`;
+      <button data-lt="tut" aria-pressed="${S.screen === "tut"}">📄 ${L("Reglamento y uso", "Rules and usage")}<small>${L("Manual y vídeos", "Manual and videos")}</small></button>
+      <button data-lt="mis" aria-pressed="${S.screen === "mis"}">📋 ${L("Mis citas", "My bookings")}<small>${L("Ver y cancelar", "See and cancel")}</small></button></div>`;
   function tutCard(t, i) {
     const title = esc(L(t.es, t.en || t.es));
     let media;
@@ -334,6 +382,52 @@ const CONFIG = {
     return topbar(L("Corte láser", "Laser cutting"), L("Reglamento y uso", "Rules and usage"), true) + `<div class="scr">${laserTabs()}
       ${rulesPanel()}
       ${list.map(tutCard).join("")}</div>`;
+  }
+  // Mis citas: month calendar of the student's bookings + list with a Cancelar button (until 2 h before the start).
+  const LIMIT_MS = 2 * 3600000;
+  function misMonths() { const from = mad(new Date()).key.slice(0, 7), last = (S.mine || []).length ? mad(S.mine[S.mine.length - 1].start).key.slice(0, 7) : from;
+    const out = []; let [y, m] = from.split("-").map(Number); const [ty, tm] = last.split("-").map(Number);
+    while (y < ty || (y === ty && m <= tm)) { out.push(y + "-" + pad(m)); m++; if (m > 12) { m = 1; y++; } } return out; }
+  function misCal() {
+    const ms = misMonths(); if (!S.mmonth || !ms.includes(S.mmonth)) S.mmonth = ms[0];
+    const i = ms.indexOf(S.mmonth), [y, m] = S.mmonth.split("-").map(Number), today = mad(new Date()).key;
+    const count = {}; (S.mine || []).forEach(r => { const k = mad(r.start).key; count[k] = (count[k] || 0) + 1; });
+    const lead = (new Date(Date.UTC(y, m - 1, 1, 12)).getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m, 0, 12)).getUTCDate();
+    let cells = WDH[S.lang].map(w => `<span class="wdh" aria-hidden="true">${w}</span>`).join("") + '<span class="day empty"></span>'.repeat(lead);
+    for (let d = 1; d <= days; d++) {
+      const k = y + "-" + pad(m) + "-" + pad(d), n = count[k] || 0, t = k === today ? " today" : "";
+      if (k < today) { cells += `<span class="day out" aria-hidden="true"><span class="n">${d}</span><span class="f"></span></span>`; continue; }
+      cells += n ? `<button class="day mine${t}" data-mk="${k}" aria-pressed="${S.mday === k}" aria-label="${esc(fDay(noonUTC(k)))}, ${n} ${n === 1 ? L("cita", "booking") : L("citas", "bookings")}"><span class="n">${d}</span><span class="f">${n}</span></button>`
+                 : `<span class="day nob${t}"><span class="n">${d}</span><span class="f"></span></span>`;
+    }
+    return `<div class="cal"><div class="calh"><button class="calnav" id="mmPrev" ${i > 0 ? "" : "disabled"} aria-label="${L("Mes anterior", "Previous month")}">${I.back}</button>
+      <b>${esc(cap(FMONTH[S.lang].format(new Date(Date.UTC(y, m - 1, 15)))))}</b>
+      <button class="calnav" id="mmNext" ${i < ms.length - 1 ? "" : "disabled"} aria-label="${L("Mes siguiente", "Next month")}">${I.next}</button></div>
+      <div class="grid7">${cells}</div>
+      <div class="legend"><span><i class="lg mine"></i>${L("Tus citas (el número)", "Your bookings (the number)")}</span></div></div>`;
+  }
+  function bkCard(r, i) {
+    const s = mad(r.start), e = mad(new Date(r.start.getTime() + 3600000)), left = r.start.getTime() - Date.now(), mc = CONFIG.MACHINES.find(x => x.id === r.machine);
+    const act = left > LIMIT_MS ? `<button class="btn2 cx" data-cx="${i}">✕ ${L("Cancelar", "Cancel")}</button>`
+      : left > 0 ? `<p class="late">⏰ ${L("Menos de 2 h: escribe a", "Less than 2 h: email")} <a href="mailto:laser@uchceu.es">laser@uchceu.es</a></p>`
+      : `<p class="late">▶️ ${L("En curso", "In progress")}</p>`;
+    return `<li class="bk${S.mday === s.key ? " on" : ""}" data-bk="${s.key}"><div class="when"><b>${esc(cap(fDay(r.start)))}</b><span>${pad(s.h)}:${pad(s.min)}–${pad(e.h)}:${pad(e.min)} · ${esc(mc ? mc.short + " " + mc.w : r.machine)}</span></div>${act}</li>`;
+  }
+  function vMis() {
+    let left, right = "";
+    if (!user || !user.k) left = `<div class="state"><p><b>${L("Entra con el enlace de tu correo.", "Open the link in your email.")}</b></p>
+        <p>${L("Abre «Ver calendario y reservar» en un correo de tu cuenta (cuenta confirmada, mis enlaces, PIN cambiado). Así esta página sabe qué citas son tuyas.", "Open “View calendar and book” in an email about your account (account confirmed, my links, PIN changed). Then this page knows which bookings are yours.")}</p></div>`;
+    else if (S.mineLoading && !S.mine) left = `<div class="skel"></div><div class="skel"></div>`;
+    else if (S.mineErr) left = `<div class="state"><p><b>${L("No se pueden cargar tus citas ahora.", "Couldn't load your bookings right now.")}</b></p><button class="btn2" id="mRetry">${L("Reintentar", "Try again")}</button></div>`;
+    else {
+      const list = S.mine || [];
+      left = misCal();
+      right = `<div class="sect"><h2>${L("Próximas citas", "Upcoming bookings")} <small>(${list.length})</small></h2><span>${esc(user.e)}</span></div>
+        ${list.length ? `<ul class="bklist">${list.map(bkCard).join("")}</ul>` : `<div class="state"><p><b>${L("No tienes citas próximas.", "You have no upcoming bookings.")}</b></p></div>`}
+        <p class="note">${L("Puedes cancelar hasta 2 h antes. La lista tarda unos minutos en actualizarse después de reservar o cancelar.", "You can cancel up to 2 h before. The list takes a few minutes to update after you book or cancel.")}</p>
+        <div class="mini"><button id="mRetry">🔄 ${L("Actualizar", "Refresh")}</button><button id="mBook">📅 ${L("Reservar otra hora", "Book another hour")}</button></div>`;
+    }
+    return topbar(L("Corte láser", "Laser cutting"), L("Mis citas", "My bookings"), true) + `<div class="scr two"><div class="col">${laserTabs()}${demoNote()}${left}</div><div class="col">${right}</div></div>`;
   }
   function vPrint3d() {
     if (CONFIG.PRINT3D) return topbar(L("Impresión 3D", "3D printing"), "Bambu Lab P1S", true) + `<div class="scr">
@@ -419,6 +513,14 @@ const CONFIG = {
           <p class="note">${L("Cancela al menos 2 h antes. Después, escribe a laser@uchceu.es.", "Cancel at least 2 h before. After that, email laser@uchceu.es.")}</p>
         </div></div></div>`;
     }
+    if (S.sheet === "cancel" && S.cx) {
+      const r = S.cx, q = cancelQuery(r), st = mad(r.start), embed = CONFIG.CANCEL_URL.replace("airtable.com/", "airtable.com/embed/");
+      const frame = DEMO ? `<div class="scr"><div class="state"><p>${L("<b>Modo demostración.</b> Aquí se abre el formulario Cancelar cita con tu email, PIN, código y esta cita ya puestos.", "<b>Demo mode.</b> The Cancelar cita form opens here with your email, PIN, code and this booking filled in.")}</p></div></div>`
+                         : `<iframe title="Cancelar cita - Cancel a booking" src="${esc(embed + "?" + q)}" loading="eager"></iframe>`;
+      return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+        <div class="shead"><div><b id="shT">❌ ${L("Cancelar cita", "Cancel a booking")} · ${pad(st.h)}:${pad(st.min)}</b><span>${esc(cap(fDay(r.start)))} · ${esc(r.machine)}</span></div>${closeBtn}</div>
+        ${frame}${foot(CONFIG.CANCEL_URL + "?" + q)}</div>`;
+    }
     if (!S.sheet || !S.slot) return "";
     const q = bookQuery(), sel = mad(S.slot.start);
     const frame = DEMO ? `<div class="scr"><div class="state"><p>${L(`<b>Modo demostración.</b> Aquí se abre el formulario Solicitar cita con la máquina y la hora ya puestas${user ? ", y tu email y PIN" : ""}.`, `<b>Demo mode.</b> The Solicitar cita form opens here with the machine and hour filled in${user ? ", and your email and PIN" : ""}.`)}</p></div></div>`
@@ -440,14 +542,14 @@ const CONFIG = {
   function render() {
     document.documentElement.lang = S.lang;
     document.title = L("Taller ESET - Reservas", "ESET Workshop - Bookings");
-    const V = { home: vHome, laser: vLaser, gate: vGate, tut: vTut, print3d: vPrint3d, cal: vCal };
+    const V = { home: vHome, laser: vLaser, gate: vGate, tut: vTut, print3d: vPrint3d, cal: vCal, mis: vMis };
     if (!$("vw")) app.innerHTML = '<div id="vw" class="keep"></div><div id="sh" class="keep"></div>';
     const vw = $("vw"), sh = $("sh"), v3old = $("v3");
     if (S.screen === "print3d" && shownScreen === "print3d" && v3old && CONFIG.PRINT3D) {
       swapParts(vw, rail() + vPrint3d(), [".rail", ".top"]);
       try { v3old.contentWindow.postMessage({ type: "lang", lang: S.lang }, location.origin); } catch (e) {}
     } else vw.innerHTML = rail() + (V[S.screen] || vHome)();
-    const sheetKey = S.sheet ? S.sheet + "|" + (S.slot ? S.slot.label : "") : "";
+    const sheetKey = S.sheet ? S.sheet + "|" + (S.sheet === "cancel" ? (S.cx ? S.cx.id : "") : S.slot ? S.slot.label : "") : "";
     if (sheetKey !== shownSheet || !sheetKey) sh.innerHTML = vSheet();
     else swapParts(sh, vSheet(), [".shead", ".sfoot"]);   // same sheet open: new texts, same form iframe
     shownSheet = sheetKey; shownScreen = S.screen;
@@ -457,12 +559,18 @@ const CONFIG = {
     app.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { S.sheet = false; S.screen = b.dataset.nav; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { S.screen = b.dataset.lt; S.vid = null; render(); });
     app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
-    on("out", () => { store.clear("eset_user"); user = null; S.sheet = false; S.screen = "home"; render(); });
+    on("out", () => { store.clear("eset_user"); user = null; S.mine = null; S.sheet = false; S.screen = "home"; render(); });
     on("tPrint", () => { S.screen = "print3d"; render(); window.scrollTo(0, 0); });
     const v3 = $("v3"); if (v3 && v3 !== v3old) v3.onload = () => { try { const d = v3.contentDocument, fit = () => v3.style.height = d.documentElement.scrollHeight + "px"; fit(); new ResizeObserver(fit).observe(d.body); } catch (e) {} };
     on("tLaser", () => { S.screen = user ? "cal" : "laser"; if (S.screen === "cal" && !S.records && !S.loading) load(); else render(); });
     on("aBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); });
     on("retry", load);
+    on("mRetry", loadMine);
+    app.querySelectorAll(".bk .cx[data-cx]").forEach(b => b.onclick = () => { const r = (S.mine || [])[+b.dataset.cx]; if (!r) return; if (!user.c) { S.sheet = "cxinfo"; render(); return; } S.cx = r; S.sheet = "cancel"; render(); });
+    on("mBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); window.scrollTo(0, 0); });
+    on("mmPrev", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i > 0) { S.mmonth = ms[i - 1]; render(); } });
+    on("mmNext", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i < ms.length - 1) { S.mmonth = ms[i + 1]; render(); } });
+    app.querySelectorAll(".day[data-mk]").forEach(b => b.onclick = () => { S.mday = S.mday === b.dataset.mk ? null : b.dataset.mk; render(); const c = app.querySelector('.bk[data-bk="' + S.mday + '"]'); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); });
     on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
     on("aCreate", () => { S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("gGo", () => { if (!(S.readDone && S.readTick && (!CONFIG.PRINT3D || S.readTick3d))) return; S.sheet = "create"; render(); });
@@ -476,15 +584,16 @@ const CONFIG = {
       io.observe(rend);
     } else if (rend && !S.readDone) { S.readDone = true; }
     on("cxInfo", () => { S.sheet = "cxinfo"; render(); });
-    on("scrim", () => { S.sheet = false; render(); });
-    on("close", () => { const was = S.sheet; S.sheet = false; if (was === "book") { S.slot = null; load(); } else render(); });
+    on("scrim", () => { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); });
+    on("close", () => { const was = S.sheet; S.sheet = false; if (was === "book") { S.slot = null; load(); } else if (was === "cancel") { S.cx = null; loadMine(); } else render(); });
     const rem = $("rem"); if (rem) rem.onchange = () => store.set("eset_user", JSON.stringify(user), rem.checked);
     app.querySelectorAll(".mseg button[data-m]").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
     app.querySelectorAll(".day[data-k]:not([disabled])").forEach(b => b.onclick = () => { S.day = b.dataset.k; S.slot = null; render(); });
     on("mPrev", () => { const ms = months(), i = ms.indexOf(S.month); if (i > 0) { S.month = ms[i - 1]; render(); } });
     on("mNext", () => { const ms = months(), i = ms.indexOf(S.month); if (i < ms.length - 1) { S.month = ms[i + 1]; render(); } });
     app.querySelectorAll(".hr:not(.busy)").forEach(b => b.onclick = () => { S.slot = slotsFor(S.day)[+b.dataset.i]; render(); });
-    document.onkeydown = e => { if (e.key === "Escape" && S.sheet) { S.sheet = false; render(); } };
+    document.onkeydown = e => { if (e.key === "Escape" && S.sheet) { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); } };
+    if (S.screen === "mis" && user && user.k && !S.mine && !S.mineLoading && !S.mineErr) loadMine();
   }
   render();
 })();
