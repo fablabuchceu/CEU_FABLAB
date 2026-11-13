@@ -416,7 +416,7 @@ const CONFIG = {
   function vMis() {
     let left, right = "";
     if (!user || !user.k) left = `<div class="state"><p><b>${L("Entra con el enlace de tu correo.", "Open the link in your email.")}</b></p>
-        <p>${L("Abre «Ver calendario y reservar» en un correo de tu cuenta (cuenta confirmada, mis enlaces, PIN cambiado). Así esta página sabe qué citas son tuyas.", "Open “View calendar and book” in an email about your account (account confirmed, my links, PIN changed). Then this page knows which bookings are yours.")}</p></div>`;
+        <p>${L("Usa el enlace «Abrir la web para reservar, ver tus citas y cancelarlas» en un correo de tu cuenta (cuenta confirmada, mis enlaces, PIN cambiado). Así esta página sabe qué citas son tuyas.", "Use the link “Open the website to book, see current reservations, cancel reservations” in an email about your account (account confirmed, my links, PIN changed). Then this page knows which bookings are yours.")}</p></div>`;
     else if (S.mineLoading && !S.mine) left = `<div class="skel"></div><div class="skel"></div>`;
     else if (S.mineErr) left = `<div class="state"><p><b>${L("No se pueden cargar tus citas ahora.", "Couldn't load your bookings right now.")}</b></p><button class="btn2" id="mRetry">${L("Reintentar", "Try again")}</button></div>`;
     else {
@@ -483,7 +483,7 @@ const CONFIG = {
         <div class="hours">${hrs || `<p class="note" style="grid-column:1/-1">${L("No hay horas libres. Elige otro día.", "No free hours. Pick another day.")}</p>`}</div>
         <p class="note">${L("Máx. 2 h al día y 3 h a la semana. Después confirma la cita desde el correo.", "Max 2 h a day and 3 h a week. Then confirm the booking from the email.")}</p>
         <div class="mini">${user ? (cl ? `<a href="${esc(cl)}" target="_blank" rel="noopener">❌ ${L("Cancelar cita", "Cancel a booking")}</a>` : `<button id="cxInfo">❌ ${L("Cancelar cita", "Cancel a booking")}</button>`) : ""}<a href="${esc(hoursLink())}" target="_blank" rel="noopener">⏱️ ${L("Mis horas", "My hours")}</a></div>
-        ${user ? "" : `<p class="note">${L("Para cancelar desde aquí, entra con el enlace «Ver calendario y reservar» de tu correo.", "To cancel from here, sign in with the \u201cView calendar and book\u201d link in your email.")}</p>`}`;
+        ${user ? "" : `<p class="note">${L("Para cancelar desde aquí, entra con el enlace «Abrir la web para reservar, ver tus citas y cancelarlas» de tu correo.", "To cancel from here, sign in with the \u201cOpen the website to book, see current reservations, cancel reservations\u201d link in your email.")}</p>`}`;
     }
     const sel = S.slot ? mad(S.slot.start) : null;
     const ready = S.slot && S.ack;
@@ -509,7 +509,7 @@ const CONFIG = {
         <div class="shead"><div><b id="shT">❌ ${L("Cancelar cita", "Cancel a booking")}</b><span>${esc(user ? user.e : "")}</span></div>${closeBtn}</div>
         <div class="scr"><div class="state">
           <p><b>${L("Para cancelar, abre una vez el enlace de tu correo.", "To cancel, open the link from your email once.")}</b></p>
-          <p>${L("Por seguridad, solo se puede cancelar con tu enlace personal: «Cancelar cita» o «Ver calendario y reservar» en los correos de tu cuenta (cuenta confirmada, mis enlaces, PIN cambiado). Si abres «Ver calendario y reservar», esta página lo recuerda y el botón Cancelar cita funciona aquí.", "For security, you can only cancel with your personal link: \u201cCancel a booking\u201d or \u201cView calendar and book\u201d in your account emails (account confirmed, my links, PIN changed). If you open \u201cView calendar and book\u201d, this page remembers it and the Cancel a booking button works here.")}</p>
+          <p>${L("Por seguridad, solo se puede cancelar con tu enlace personal: «Cancelar cita» o «Abrir la web para reservar, ver tus citas y cancelarlas» en los correos de tu cuenta (cuenta confirmada, mis enlaces, PIN cambiado). Si abres «Abrir la web para reservar, ver tus citas y cancelarlas», esta página lo recuerda y el botón Cancelar cita funciona aquí.", "For security, you can only cancel with your personal link: \u201cCancel a booking\u201d or \u201cOpen the website to book, see current reservations, cancel reservations\u201d in your account emails (account confirmed, my links, PIN changed). If you open \u201cOpen the website to book, see current reservations, cancel reservations\u201d, this page remembers it and the Cancel a booking button works here.")}</p>
           <p class="note">${L("Cancela al menos 2 h antes. Después, escribe a laser@uchceu.es.", "Cancel at least 2 h before. After that, email laser@uchceu.es.")}</p>
         </div></div></div>`;
     }
