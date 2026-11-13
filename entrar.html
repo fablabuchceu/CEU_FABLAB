@@ -23,12 +23,16 @@
 const CONFIG = {
   HOME: "index.html",
   FORGOT_URL: "https://airtable.com/appeQ6gkuiJAq7wiT/pagfix2aQ1lqOqEp9/form",
-  CREATE_PAGE: "index.html",                  // Crear cuenta lives on the laser screen for now
-  EMAIL_RE: /^[^@\s]+@(alumnos\.)?uchceu\.es$/
+  CREATE_PAGE: "index.html#crear-cuenta",     // Crear cuenta lives on Inicio (since 2026-11-12)
+  EMAIL_RE: /^[^@\s]+@(alumnos\.)?uchceu\.es$/,
+  // TEMPORARY (testing, 2026-11-13): hashes of the 2 Gmail test addresses allowed in Students."Domain OK".
+  // Remove together with the Domain OK lines and the Crear cuenta validation after testing.
+  TEST_EMAIL_HASHES: ["1039hdj", "70stcx"]
 };
 (function(){
   "use strict";
   const app = document.getElementById("app"), $ = id => document.getElementById(id);
+  const isTestEmail = v => { let x = 5381; for (const c of v) x = ((x * 33) ^ c.charCodeAt(0)) >>> 0; return (CONFIG.TEST_EMAIL_HASHES || []).includes(x.toString(36)); };
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const back = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
   const store = { get(k){ try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch(e){ return null; } },
@@ -63,7 +67,7 @@ const CONFIG = {
       <label class="chk" for="r"><input type="checkbox" id="r"><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>
       <button class="cta" type="submit">${L("Guardar y reservar", "Save and book")}<small>${L("Después eliges máquina y hora", "Then pick machine and hour")}</small></button>
       <p class="note">${L("Esto no es un inicio de sesión: la página no comprueba tus datos. El PIN se comprueba al enviar la reserva: si no es correcto, te llega un correo. Para cancelar una cita usa el enlace Cancelar cita de tu correo.", "This isn't a login: the page doesn't check your details. Your PIN is checked when you send the booking: if it's wrong, you get an email. To cancel a booking, use the Cancel a booking link in your email.")}</p>
-      <p class="note"><a href="${esc(CONFIG.FORGOT_URL)}" target="_blank" rel="noopener">${L("¿Has olvidado tu PIN?", "Forgot your PIN?")}</a> · <a href="${CONFIG.CREATE_PAGE}">${L("¿No tienes cuenta? Créala desde Corte láser", "No account? Create it from Laser cutting")}</a></p>
+      <p class="note"><a href="${esc(CONFIG.FORGOT_URL)}" target="_blank" rel="noopener">${L("¿Has olvidado tu PIN?", "Forgot your PIN?")}</a> · <a href="${CONFIG.CREATE_PAGE}">${L("¿No tienes cuenta? Créala en Inicio", "No account? Create it on Home")}</a></p>
     </form>`;
   }
   function render() {
@@ -76,7 +80,7 @@ const CONFIG = {
       ev.preventDefault();
       const e = ($("e").value || "").trim().toLowerCase(), e2 = ($("e2").value || "").trim().toLowerCase(), p = ($("p").value || "").trim();
       S.email = e; S.email2 = e2;
-      if (!CONFIG.EMAIL_RE.test(e)) { S.err = L("Escribe tu email de la universidad (@alumnos.uchceu.es o @uchceu.es).", "Type your university email (@alumnos.uchceu.es or @uchceu.es)."); render(); return; }
+      if (!CONFIG.EMAIL_RE.test(e) && !isTestEmail(e)) { S.err = L("Escribe tu email de la universidad (@alumnos.uchceu.es o @uchceu.es).", "Type your university email (@alumnos.uchceu.es or @uchceu.es)."); render(); return; }
       if (e !== e2) { S.err = L("Los dos emails no coinciden. Escríbelo igual en los dos campos.", "The two emails don't match. Type it the same in both boxes."); render(); return; }
       if (!/^\d{4}$/.test(p)) { S.err = L("El PIN tiene 4 cifras.", "The PIN has 4 digits."); render(); return; }
       // Keep the Links Code if these details came from the same student's personal link before.

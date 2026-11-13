@@ -175,7 +175,7 @@ const CONFIG = {
     return `<section class="rules" aria-labelledby="r3T"><div class="rhead"><b id="r3T">📄 ${L("Normas de impresión 3D", "3D printing rules")}</b></div>${body}${foot}</section>`;
   }
   function rulesPanel() {
-    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamiento y uso", "Rules and usage")}</b></div>
+    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamento y uso", "Rules and usage")}</b></div>
       <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
       <div class="rfoot"><a class="act slim" href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>
       <div class="rmat">${matImg()}</div></section>`;
@@ -291,7 +291,7 @@ const CONFIG = {
     return `<div class="top">${back ? `<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
   }
   const demoNote = () => DEMO ? `<div class="demo">${L("Modo demostración: horas de ejemplo", "Demo mode: example hours")}</div>` : "";
-  const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">DOC</span><div><b>${L("Reglamiento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
+  const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">DOC</span><div><b>${L("Reglamento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
 
   const saveCard = () => `<a class="doc save" href="entrar.html"><span class="ic" aria-hidden="true">🔑</span><div><b>${L("Guardar mis datos", "Save my details")}</b><span>${L("Ya tengo cuenta: no escribir email y PIN en cada reserva", "I have an account: skip typing email and PIN every time")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
   // Crear cuenta lives on Inicio (step 3, 12 Nov): students can register without going into Láser first. The rules gate (vGate) still comes before the form.
