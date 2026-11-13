@@ -555,14 +555,14 @@ const CONFIG = {
     shownSheet = sheetKey; shownScreen = S.screen;
     app.classList.add("wide");   // every page uses the wide desktop layout (≥1000 px); phones unchanged
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-    on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? (user ? "home" : "laser") : "home"; render(); window.scrollTo(0, 0); });
+    on("back", () => { S.sheet = false; S.screen = S.screen === "cal" ? "laser" : "home"; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { S.sheet = false; S.screen = b.dataset.nav; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { S.screen = b.dataset.lt; S.vid = null; render(); });
     app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
     on("out", () => { store.clear("eset_user"); user = null; S.mine = null; S.sheet = false; S.screen = "home"; render(); });
     on("tPrint", () => { S.screen = "print3d"; render(); window.scrollTo(0, 0); });
     const v3 = $("v3"); if (v3 && v3 !== v3old) v3.onload = () => { try { const d = v3.contentDocument, fit = () => v3.style.height = d.documentElement.scrollHeight + "px"; fit(); new ResizeObserver(fit).observe(d.body); } catch (e) {} };
-    on("tLaser", () => { S.screen = user ? "cal" : "laser"; if (S.screen === "cal" && !S.records && !S.loading) load(); else render(); });
+    on("tLaser", () => { S.screen = "laser"; render(); window.scrollTo(0, 0); });   // always via the Láser screen (Reservas / Reglamento / Mis citas tabs), signed in or not
     on("aBook", () => { S.screen = "cal"; if (!S.records && !S.loading) load(); else render(); });
     on("retry", load);
     on("mRetry", loadMine);
