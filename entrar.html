@@ -52,7 +52,8 @@ const CONFIG = {
     return top() + `<div class="scr">
       <div class="hero"><div class="stripe" aria-hidden="true"></div>
         <h1>${L("Tus datos están guardados", "Your details are saved")}</h1>
-        <p><b>${esc(user.e)}</b></p></div>
+        <p><b>${esc(user.e)}</b></p>
+        <p>PIN: <b id="pv">••••</b> <button type="button" class="btn2" id="spv" style="display:inline-block;width:auto;padding:4px 12px;margin-left:6px" aria-pressed="false">${L("Mostrar PIN", "Show PIN")}</button></p></div>
       <a class="cta" href="${CONFIG.HOME}" style="text-decoration:none;text-align:center">${L("Ir a reservar", "Go to booking")}<small>${L("Elige máquina y hora", "Pick machine and hour")}</small></a>
       <button class="btn2" id="forget">${L("Borrar mis datos de este dispositivo", "Remove my details from this device")}</button>
       <p class="note">${L("Comprueba que el email de arriba es el de tu cuenta: si tiene un error, las reservas se rechazan y el aviso no te llega. Si el PIN no es correcto, la reserva se rechaza y te llega un correo. En los dos casos, borra tus datos y guárdalos otra vez.", "Check that the email above is your account's: if it has a typo, bookings are rejected and the notice never reaches you. If the PIN is wrong, the booking is rejected and you get an email. Either way, remove your details and save them again.")}</p>
@@ -63,10 +64,11 @@ const CONFIG = {
       <label class="fld"><span>Email</span><input id="e" type="email" autocomplete="email" inputmode="email" placeholder="nombre@alumnos.uchceu.es" value="${esc(S.email)}"></label>
       <label class="fld"><span>${L("Repite el email", "Repeat your email")}</span><input id="e2" type="email" autocomplete="off" inputmode="email" placeholder="nombre@alumnos.uchceu.es" value="${esc(S.email2 || "")}"></label>
       <label class="fld"><span>PIN</span><input id="p" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}" placeholder="••••"></label>
+      <label class="chk" for="sp"><input type="checkbox" id="sp"><span>${L("Mostrar PIN", "Show PIN")}</span></label>
       ${S.err ? `<p class="err" role="alert">${S.err}</p>` : ""}
       <label class="chk" for="r"><input type="checkbox" id="r"><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>
       <button class="cta" type="submit">${L("Guardar y reservar", "Save and book")}<small>${L("Después eliges máquina y hora", "Then pick machine and hour")}</small></button>
-      <p class="note">${L("Esto no es un inicio de sesión: la página no comprueba tus datos. El PIN se comprueba al enviar la reserva: si no es correcto, te llega un correo. Para cancelar una cita usa el enlace Cancelar cita de tu correo.", "This isn't a login: the page doesn't check your details. Your PIN is checked when you send the booking: if it's wrong, you get an email. To cancel a booking, use the Cancel a booking link in your email.")}</p>
+      <p class="note">${L("Esto no es un inicio de sesión: la página no comprueba tus datos. El PIN se comprueba al enviar la reserva: si no es correcto, te llega un correo. Para cancelar una cita, entra con el enlace «Abrir la web…» de tu correo y usa Mis citas.", "This isn't a login: the page doesn't check your details. Your PIN is checked when you send the booking: if it's wrong, you get an email. To cancel a booking, sign in with the “Open the website…” link in your email and use My bookings.")}</p>
       <p class="note"><a href="${esc(CONFIG.FORGOT_URL)}" target="_blank" rel="noopener">${L("¿Has olvidado tu PIN?", "Forgot your PIN?")}</a> · <a href="${CONFIG.CREATE_PAGE}">${L("¿No tienes cuenta? Créala en Inicio", "No account? Create it on Home")}</a></p>
     </form>`;
   }
@@ -75,6 +77,9 @@ const CONFIG = {
     document.title = L("Guardar mis datos - Taller ESET", "Save my details - ESET Workshop");
     app.innerHTML = user ? vSaved() : vForm();
     app.querySelectorAll(".lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.l; try { localStorage.setItem("eset_lang", S.lang); } catch(e) {} render(); });
+    // Show / hide the PIN without re-rendering (a re-render would clear what was typed).
+    const sp = $("sp"); if (sp) sp.onchange = () => { $("p").type = sp.checked ? "text" : "password"; };
+    const spv = $("spv"); if (spv) spv.onclick = () => { const on = spv.getAttribute("aria-pressed") !== "true"; spv.setAttribute("aria-pressed", on); $("pv").textContent = on ? user.p : "••••"; spv.textContent = on ? L("Ocultar PIN", "Hide PIN") : L("Mostrar PIN", "Show PIN"); };
     const fg = $("forget"); if (fg) fg.onclick = () => { store.clear("eset_user"); user = null; render(); };
     const f = $("f"); if (f) f.onsubmit = ev => {
       ev.preventDefault();
