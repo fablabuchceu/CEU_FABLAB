@@ -250,3 +250,7 @@ button{font:inherit;color:inherit}
 .hbox .hl{font-size:15px;white-space:nowrap}.hbox .hl b{font:800 24px var(--f-display);color:#f2b51c;margin-right:2px}.hbox .hl small{opacity:.8}
 .hbox li.full .hl b{color:#ff8a80}
 .hbox p{margin:0;font-size:13px;line-height:1.45;opacity:.9}
+/* Laser icon in the nav bar; machine pictures on the machine buttons (16 Nov) */
+.rail .ico{display:block;width:34px;height:29px}
+.mseg button .mpic{display:block;width:80px;height:68px;margin:0 auto 4px}
+.mseg button:not([aria-pressed="true"]) .mpic{opacity:.7}
