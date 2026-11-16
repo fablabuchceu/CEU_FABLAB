@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261116d">
+<link rel="stylesheet" href="styles.css?v=20261116e">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -87,6 +87,15 @@ const CONFIG = {
   // RULES_EMBED = the same view link + "?embed". Shown beside the calendar, on the Crear cuenta step and in the Tutoriales tab.
   RULES_DOC:   "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view",
   RULES_EMBED: "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view?embed",
+  // Machine manuals (Canva, public view links), one per machine and language (16 Nov). The rules panels show the one for the
+  // chosen machine in the page language (embed = link + "?embed"). Short canva.link links don't embed: use the canva.com/design/… link.
+  // Machine names must match MACHINES below. If a manual is missing, RULES_DOC is shown.
+  MANUALS: {
+    "Fusion Edge 60W": { es: "https://www.canva.com/design/DAHX5coTtIU/1INMaFalZ_daYhBgP78MKg/view",
+                         en: "https://www.canva.com/design/DAHaspan7gs/4Cd7IM_BNRWLfXgm2HLv3Q/view" },
+    "Helix 50W":       { es: "https://www.canva.com/design/DAHZSUQoKsU/1JmP6-q4dM0Mzf3OGqXs_w/view",
+                         en: "https://www.canva.com/design/DAHanGpWCgw/KNEIbzUmLE12gZcH0xMZqQ/view" },
+  },
   RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
 
   // Tutoriales tab (laser): shows the Canva document (RULES_EMBED) and, below it, any extra videos listed here. One entry per video. SharePoint/Stream video: Share → Embed code → copy the
@@ -162,11 +171,14 @@ const CONFIG = {
   const remembered = () => { try { return !!localStorage.getItem("eset_user"); } catch(e){ return false; } };
 
 
-  // (Rules text removed 2026-11-11: the Reglamento y uso document is now the Canva design in CONFIG.RULES_DOC / RULES_EMBED.)
+  // (Rules text removed 2026-11-11. Since 16 Nov the rules panels show the machine manual from CONFIG.MANUALS, per machine and language.)
   // ---- Language (one at a time; ES/EN switch at the top of every screen) ----
   const L = (es, en) => S.lang === "en" ? en : es;
   const fDay = d => FMT[S.lang].format(d);
-  const pdfHref = () => CONFIG.RULES_DOC;
+  // Manual for a machine in the current language (falls back to RULES_DOC).
+  const manualOf = m => ((CONFIG.MANUALS || {})[m] || {})[S.lang] || CONFIG.RULES_DOC;
+  const manualMachine = () => S.rm || S.machine;
+  const pdfHref = () => manualOf(manualMachine());
   function initLang() {
     try { const s = localStorage.getItem("eset_lang"); if (s === "es" || s === "en") return s; } catch(e) {}
     return /^en(-|$)/i.test(navigator.language || "") ? "en" : "es";
@@ -190,10 +202,13 @@ const CONFIG = {
     const foot = CONFIG.RULES3D_DOC ? `<div class="rfoot"><a class="act slim" href="${esc(CONFIG.RULES3D_DOC)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>` : "";
     return `<section class="rules" aria-labelledby="r3T"><div class="rhead"><b id="r3T">📄 ${L("Normas de impresión 3D", "3D printing rules")}</b></div>${body}${foot}</section>`;
   }
-  function rulesPanel() {
-    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamento y uso", "Rules and usage")}</b></div>
-      <div class="rbody canva"><iframe src="${esc(CONFIG.RULES_EMBED)}" title="${L("Reglamento y uso", "Rules and usage")}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
-      <div class="rfoot"><a class="act slim" href="${esc(CONFIG.RULES_DOC)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>
+  // withSwitch = false (Solicitar cita): no switch, the manual follows the machine chosen to book.
+  function rulesPanel(withSwitch = true) {
+    const m = withSwitch ? manualMachine() : S.machine, doc = manualOf(m), mc = CONFIG.MACHINES.find(x => x.id === m);
+    const sw = `<div class="rsw" role="group" aria-label="${L("Manual de la máquina", "Machine manual")}">${CONFIG.MACHINES.map(x => `<button data-rm="${esc(x.id)}" aria-pressed="${x.id === m}">${esc(x.short)}</button>`).join("")}</div>`;
+    return `<section class="rules" aria-labelledby="rT"><div class="rhead"><b id="rT">📄 ${L("Reglamento y uso", "Rules and usage")} · ${esc(mc ? mc.short : m)}</b>${withSwitch ? sw : ""}</div>
+      <div class="rbody canva"><iframe src="${esc(doc + "?embed")}" title="${L("Manual", "Manual")} ${esc(mc ? mc.short : m)}" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe></div>
+      <div class="rfoot"><a class="act slim" href="${esc(doc)}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">↗</span><div><b>${L("Abrir en pantalla completa", "Open full screen")}</b></div></a></div>
       <div class="rmat">${matImg()}</div></section>`;
   }
 
@@ -648,7 +663,8 @@ const CONFIG = {
     on("scrim", () => { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); });
     on("close", () => { const was = S.sheet; S.sheet = false; if (was === "book") { S.slot = null; load(); } else if (was === "cancel") { S.cx = null; loadMine(); } else render(); });
     const rem = $("rem"); if (rem) rem.onchange = () => store.set("eset_user", JSON.stringify(user), rem.checked);
-    app.querySelectorAll(".mseg button[data-m]").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
+    app.querySelectorAll(".rsw button[data-rm]").forEach(b => b.onclick = () => { S.rm = b.dataset.rm; render(); });
+    app.querySelectorAll(".mseg button[data-m]").forEach(b => b.onclick = () => { S.machine = b.dataset.m; S.rm = null; S.slot = null; if (!S.day || dstat(S.day).c !== "av") S.day = firstFree(); render(); });
     app.querySelectorAll(".day[data-k]:not([disabled])").forEach(b => b.onclick = () => { S.day = b.dataset.k; S.slot = null; render(); });
     on("mPrev", () => { const ms = months(), i = ms.indexOf(S.month); if (i > 0) { S.month = ms[i - 1]; render(); } });
     on("mNext", () => { const ms = months(), i = ms.indexOf(S.month); if (i < ms.length - 1) { S.month = ms[i + 1]; render(); } });

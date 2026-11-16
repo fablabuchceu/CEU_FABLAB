@@ -255,3 +255,7 @@ button{font:inherit;color:inherit}
 .rail .ico{display:block;width:34px;height:29px}
 .mseg button .mpic{display:block;width:80px;height:68px;margin:0 auto 4px}
 .mseg button:not([aria-pressed="true"]) .mpic{opacity:.7}
+/* Machine switch in the rules panel (16 Nov) */
+.rsw{display:inline-flex;gap:4px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:3px;margin-left:auto}
+.rsw button{all:unset;cursor:pointer;padding:5px 10px;border-radius:8px;font:600 13px var(--f-display);color:var(--muted)}
+.rsw button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
