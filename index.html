@@ -8,29 +8,34 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261116c">
+<link rel="stylesheet" href="styles.css?v=20261116d">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
 
-<!-- Generic illustrations (original) -->
+<!-- Illustrations (original). svgLaser = the two machines (same drawings as HELIX_PIC / FUSION_PIC in the script: change both). -->
 <template id="svgLaser">
-  <svg viewBox="0 0 320 180" role="img" aria-label="Cortadora láser - Laser cutter">
-    <rect x="34" y="70" width="252" height="92" rx="10" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3"/>
-    <path d="M44 70 L64 26 H256 L276 70 Z" style="fill:var(--surface);stroke:var(--ink)" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M74 64 L88 34 H232 L246 64 Z" style="fill:var(--glass)" opacity=".75"/>
-    <rect x="34" y="70" width="252" height="10" style="fill:var(--ink)"/>
-    <rect x="232" y="92" width="38" height="52" rx="5" style="fill:var(--field);stroke:var(--ink)" stroke-width="2"/>
-    <circle cx="251" cy="106" r="5" style="fill:var(--accent)"/>
-    <rect x="240" y="120" width="22" height="4" rx="2" style="fill:var(--ink)"/>
-    <rect x="240" y="129" width="22" height="4" rx="2" style="fill:var(--ink)" opacity=".5"/>
-    <rect x="52" y="94" width="164" height="50" rx="4" style="fill:var(--field);stroke:var(--line)" stroke-width="2"/>
-    <rect x="120" y="40" width="26" height="12" rx="2" style="fill:var(--ink)"/>
-    <line x1="133" y1="52" x2="133" y2="118" style="stroke:var(--beam)" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="133" cy="120" r="5" style="fill:var(--beam)"/>
-    <path d="M80 128 H120 M146 128 H190" style="stroke:var(--muted)" stroke-width="2" stroke-dasharray="4 4"/>
-    <rect x="40" y="162" width="20" height="8" rx="2" style="fill:var(--ink)"/>
-    <rect x="260" y="162" width="20" height="8" rx="2" style="fill:var(--ink)"/>
+  <svg viewBox="0 0 150 60" role="img" aria-label="Cortadoras láser Fusion Edge y Helix - Fusion Edge and Helix laser cutters">
+    <svg x="4" y="3" width="64" height="54" viewBox="0 0 64 54">
+      <rect x="5" y="7" width="54" height="40" rx="2" fill="#ffffff" stroke="#15181e" stroke-width="1.2"/>
+      <rect x="9" y="3" width="42" height="5" rx="1.5" fill="#3a4049"/><rect x="51" y="3" width="7" height="5" rx="1" fill="#15181e"/>
+      <rect x="5.6" y="8" width="52.8" height="12" fill="#1f5ea8"/>
+      <text x="32" y="17" text-anchor="middle" font-family="'Barlow Semi Condensed',Arial,sans-serif" font-style="italic" font-weight="700" font-size="8.2" fill="#ffffff">FusionEdge</text>
+      <rect x="44" y="24" width="5" height="2.5" rx=".5" fill="#e3a300"/>
+      <rect x="10" y="33" width="44" height="12" rx="1" fill="#e9ecf0" stroke="#9aa1ab" stroke-width="1"/>
+      <circle cx="10" cy="50" r="2.6" fill="#2b2f36"/><circle cx="54" cy="50" r="2.6" fill="#2b2f36"/>
+    </svg>
+    <svg x="82" y="3" width="64" height="54" viewBox="0 0 64 54">
+      <rect x="11" y="33" width="4" height="16" fill="#2b2f36"/><rect x="49" y="33" width="4" height="16" fill="#2b2f36"/>
+      <rect x="11" y="41" width="42" height="3" fill="#2b2f36"/>
+      <rect x="9" y="48" width="8" height="3" rx="1.5" fill="#2b2f36"/><rect x="47" y="48" width="8" height="3" rx="1.5" fill="#2b2f36"/>
+      <rect x="12" y="7" width="40" height="27" fill="#ffffff" stroke="#15181e" stroke-width="1.2"/>
+      <rect x="4" y="5" width="9" height="29" rx="2" fill="#1f5ea8"/><rect x="51" y="5" width="9" height="29" rx="2" fill="#1f5ea8"/>
+      <rect x="12" y="3" width="40" height="5" rx="1.5" fill="#3a4049"/><rect x="26" y="8.5" width="12" height="2.5" rx="1" fill="#2b2f36"/>
+      <text x="32" y="22.5" text-anchor="middle" font-family="'Barlow Semi Condensed',Arial,sans-serif" font-weight="800" font-size="10" letter-spacing=".3" fill="#1f5ea8">HELIX</text>
+      <rect x="21" y="25" width="22" height="2.4" rx="1" fill="#1f5ea8" opacity=".7"/>
+      <path d="M16 30.5h32" stroke="#9aa1ab" stroke-width="1" stroke-dasharray="1.5 1.5"/>
+    </svg>
   </svg>
 </template>
 <template id="svgPrinter">

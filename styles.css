@@ -47,7 +47,8 @@ button{font:inherit;color:inherit}
 .tiles{display:grid;gap:14px}
 .tile{all:unset;box-sizing:border-box;cursor:pointer;display:grid;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;position:relative}
 .tile .pic{background:linear-gradient(160deg,var(--accent-soft),var(--field));display:grid;place-items:center;aspect-ratio:16/9;max-width:100%}
-.tile .pic svg{width:72%;height:auto}
+.tile .pic>svg{width:72%;height:auto}
+#tLaser .pic>svg{width:86%}
 .tile .cap{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .tile .cap div{flex:1;min-width:0}
 .tile .cap b{display:block;font:700 22px/1.05 var(--f-display)}
@@ -65,7 +66,7 @@ button{font:inherit;color:inherit}
 .chk input{margin-top:3px;accent-color:var(--ink)}
 /* laser */
 .banner{border-radius:20px;overflow:hidden;background:linear-gradient(160deg,var(--accent-soft),var(--field));border:1px solid var(--line);display:grid;place-items:center;aspect-ratio:2/1;max-width:100%}
-.banner svg{width:62%;height:auto}
+.banner>svg{width:70%;height:auto}
 .actions{display:grid;gap:10px}
 .act{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
 .act.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
