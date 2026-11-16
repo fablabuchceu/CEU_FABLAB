@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261116">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -592,7 +592,7 @@ const CONFIG = {
     app.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { S.sheet = false; S.screen = b.dataset.nav; render(); window.scrollTo(0, 0); });
     app.querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { S.screen = b.dataset.lt; S.vid = null; render(); });
     app.querySelectorAll(".vplay[data-v]").forEach(b => b.onclick = () => { S.vid = +b.dataset.v; render(); });
-    on("out", () => { store.clear("eset_user"); user = null; S.mine = null; S.sheet = false; S.screen = "home"; render(); });
+    on("out", () => { if (!confirm(L("¿Seguro que quieres borrar tus datos de este dispositivo? Para volver a entrar tendrás que guardarlos otra vez o abrir el enlace de tu correo.", "Are you sure you want to remove your details from this device? To come back in you will have to save them again or open the link in your email."))) return; store.clear("eset_user"); user = null; S.mine = null; S.sheet = false; S.screen = "home"; render(); });
     on("tPrint", () => { S.screen = "print3d"; render(); window.scrollTo(0, 0); });
     const v3 = $("v3"); if (v3 && v3 !== v3old) v3.onload = () => { try { const d = v3.contentDocument, fit = () => v3.style.height = d.documentElement.scrollHeight + "px"; fit(); new ResizeObserver(fit).observe(d.body); } catch (e) {} };
     on("tLaser", () => { S.screen = "laser"; render(); window.scrollTo(0, 0); });   // always via the Láser screen (Reservas / Reglamento / Mis citas tabs), signed in or not

@@ -8,7 +8,7 @@
 <title>Guardar mis datos - Taller ESET</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261116">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -80,7 +80,7 @@ const CONFIG = {
     // Show / hide the PIN without re-rendering (a re-render would clear what was typed).
     const sp = $("sp"); if (sp) sp.onchange = () => { $("p").type = sp.checked ? "text" : "password"; };
     const spv = $("spv"); if (spv) spv.onclick = () => { const on = spv.getAttribute("aria-pressed") !== "true"; spv.setAttribute("aria-pressed", on); $("pv").textContent = on ? user.p : "••••"; spv.textContent = on ? L("Ocultar PIN", "Hide PIN") : L("Mostrar PIN", "Show PIN"); };
-    const fg = $("forget"); if (fg) fg.onclick = () => { store.clear("eset_user"); user = null; render(); };
+    const fg = $("forget"); if (fg) fg.onclick = () => { if (!confirm(L("¿Seguro que quieres borrar tus datos de este dispositivo? Para volver a entrar tendrás que guardarlos otra vez o abrir el enlace de tu correo.", "Are you sure you want to remove your details from this device? To come back in you will have to save them again or open the link in your email."))) return; store.clear("eset_user"); user = null; render(); };
     const f = $("f"); if (f) f.onsubmit = ev => {
       ev.preventDefault();
       const e = ($("e").value || "").trim().toLowerCase(), e2 = ($("e2").value || "").trim().toLowerCase(), p = ($("p").value || "").trim();
