@@ -101,6 +101,9 @@ const CONFIG = {
 
   MACHINES: [ { id: "Fusion Edge 60W", short: "Fusion Edge", w: "60 W" }, { id: "Helix 50W", short: "Helix", w: "50 W" } ],
   DAYS_AHEAD: 30,
+  // Same numbers as Students.Week Limit / Day Limit in Airtable. Used only for the "hours left" box in Mis citas.
+  WEEK_LIMIT: 3,
+  DAY_LIMIT: 2,
   TZ: "Europe/Madrid",
   DEMO_HOURS: { 1:[9,10,11,12,13,14,15,16,17,18,19], 2:[9,10,11,12,13,14,15,16,17,18,19], 3:[9,10,11,12,13,14,15,16,17,18], 4:[9,10,11,12,13,14,15,16,17,18,19], 5:[9,10,11,12,13,14,15,16,17,18] }
 };
@@ -281,7 +284,8 @@ const CONFIG = {
     S.mineLoading = true; S.mineErr = null; render();
     try {
       const all = DEMO ? demoMine() : await loadMineLive(), now = Date.now();
-      S.mine = all.filter(r => r.start.getTime() + 3600000 > now && /^rec/.test(r.id)).sort((a, b) => a.start - b.start);   // not finished yet
+      S.mineAll = all.filter(r => /^rec/.test(r.id));   // also this week's finished hours (for the hours-left box)
+      S.mine =all.filter(r => r.start.getTime() + 3600000 > now && /^rec/.test(r.id)).sort((a, b) => a.start - b.start);   // not finished yet
     } catch (e) { S.mineErr = String(e.message || e); S.mine = null; }
     S.mineLoading = false; render();
   }
@@ -405,6 +409,37 @@ const CONFIG = {
       <div class="grid7">${cells}</div>
       <div class="legend"><span><i class="lg mine"></i>${L("Tus citas (el número)", "Your bookings (the number)")}</span></div></div>`;
   }
+  // Hours left: this week and every week (Monday–Friday; weekends are never bookable) that falls in the next DAYS_AHEAD days.
+  // Counts confirmed bookings (1 h each), including the ones already done this week; Pending ones don't count yet.
+  const FWEEK = { es: new Intl.DateTimeFormat("es-ES", { timeZone: "UTC", day: "numeric", month: "short" }),
+                   en: new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }) };
+  const keyOf = d => d.toISOString().slice(0, 10);
+  function hoursLeft() {
+    const today = noonUTC(mad(new Date()).key), last = rangeKeys().to;
+    let mon = new Date(today.getTime() - ((today.getUTCDay() + 6) % 7) * 86400000);
+    const used = {}; (S.mineAll || []).forEach(r => { const k = mad(r.start).key; used[k] = (used[k] || 0) + 1; });
+    const weeks = [];
+    while (keyOf(mon) <= last && weeks.length < 8) {
+      const fri = new Date(mon.getTime() + 4 * 86400000); let n = 0;
+      for (let i = 0; i < 7; i++) n += used[keyOf(new Date(mon.getTime() + i * 86400000))] || 0;
+      weeks.push({ from: mon, to: fri, used: n, left: Math.max(0, CONFIG.WEEK_LIMIT - n), now: weeks.length === 0 });
+      mon = new Date(mon.getTime() + 7 * 86400000);
+    }
+    return weeks;
+  }
+  function hoursBox() {
+    const rows = hoursLeft().map(w => {
+      const range = FWEEK[S.lang].format(w.from) + " – " + FWEEK[S.lang].format(w.to);
+      return `<li class="${w.left ? "" : "full"}"><span class="wk">${w.now ? `<b>${L("Esta semana", "This week")}</b>` : L("Semana", "Week")} <span>${esc(range)}</span></span>
+        <span class="hl"><b>${w.left}</b> ${L(w.left === 1 ? "hora libre" : "horas libres", w.left === 1 ? "hour left" : "hours left")} <small>${L("de", "of")} ${CONFIG.WEEK_LIMIT}</small></span></li>`;
+    }).join("");
+    return `<section class="hbox" aria-label="${L("Horas que te quedan", "Hours you have left")}">
+      <h2>⏱️ ${L("Horas que te quedan", "Hours you have left")}</h2>
+      <ul>${rows}</ul>
+      <p>${L(`Máximo ${CONFIG.WEEK_LIMIT} h por semana (lunes a viernes) y ${CONFIG.DAY_LIMIT} h por día, sumando las dos máquinas. Cuentan las citas confirmadas, también las que ya hiciste esta semana. Una cita sin confirmar no cuenta hasta que la confirmes.`,
+              `Maximum ${CONFIG.WEEK_LIMIT} h per week (Monday to Friday) and ${CONFIG.DAY_LIMIT} h per day, both machines together. Confirmed bookings count, including the ones you already did this week. A booking you haven't confirmed doesn't count until you confirm it.`)}</p>
+    </section>`;
+  }
   function bkCard(r, i) {
     const s = mad(r.start), e = mad(new Date(r.start.getTime() + 3600000)), left = r.start.getTime() - Date.now(), mc = CONFIG.MACHINES.find(x => x.id === r.machine);
     const act = left > LIMIT_MS ? `<button class="btn2 cx" data-cx="${i}">✕ ${L("Cancelar", "Cancel")}</button>`
@@ -421,7 +456,7 @@ const CONFIG = {
     else {
       const list = S.mine || [];
       left = misCal();
-      right = `<div class="sect"><h2>${L("Próximas citas", "Upcoming bookings")} <small>(${list.length})</small></h2><span>${esc(user.e)}</span></div>
+      right = `${hoursBox()}<div class="sect"><h2>${L("Próximas citas", "Upcoming bookings")} <small>(${list.length})</small></h2><span>${esc(user.e)}</span></div>
         ${list.length ? `<ul class="bklist">${list.map(bkCard).join("")}</ul>` : `<div class="state"><p><b>${L("No tienes citas próximas.", "You have no upcoming bookings.")}</b></p></div>`}
         <p class="note">${L("Puedes cancelar hasta 2 h antes. La lista tarda unos minutos en actualizarse después de reservar o cancelar.", "You can cancel up to 2 h before. The list takes a few minutes to update after you book or cancel.")}</p>
         <div class="mini"><button id="mRetry">🔄 ${L("Actualizar", "Refresh")}</button><button id="mBook">📅 ${L("Reservar otra hora", "Book another hour")}</button></div>`;

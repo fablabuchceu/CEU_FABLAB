@@ -241,3 +241,12 @@ button{font:inherit;color:inherit}
 .bk .late{margin:0;font-size:13px;color:var(--muted);flex:0 1 220px}
 @media (max-width:520px){.bk .cx,.bk .late{flex:1 1 100%}}
 .mseg:has(>button:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr))} .mseg:has(>button:nth-child(3)) button{padding:8px 4px;font-size:15px}
+/* Mis citas: hours-left box (high contrast: dark box, accent numbers) */
+.hbox{background:#15181e;color:#ffffff;border-radius:16px;padding:16px 18px;display:grid;gap:10px;border:3px solid var(--accent)}
+.hbox h2{margin:0;font:700 18px var(--f-display);color:#ffffff}
+.hbox ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hbox li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08)}
+.hbox .wk{font-size:15px}.hbox .wk span{opacity:.85;white-space:nowrap}
+.hbox .hl{font-size:15px;white-space:nowrap}.hbox .hl b{font:800 24px var(--f-display);color:#f2b51c;margin-right:2px}.hbox .hl small{opacity:.8}
+.hbox li.full .hl b{color:#ff8a80}
+.hbox p{margin:0;font-size:13px;line-height:1.45;opacity:.9}
