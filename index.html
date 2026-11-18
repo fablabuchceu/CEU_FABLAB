@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261116e">
+<link rel="stylesheet" href="styles.css?v=20261118">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -365,7 +365,19 @@ const CONFIG = {
 
   const saveCard = () => `<a class="doc save" href="entrar.html"><span class="ic" aria-hidden="true">🔑</span><div><b>${L("Guardar mis datos", "Save my details")}</b><span>${L("Ya tengo cuenta: no escribir email y PIN en cada reserva", "I have an account: skip typing email and PIN every time")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;
   // Crear cuenta lives on Inicio (step 3, 12 Nov): students can register without going into Láser first. The rules gate (vGate) still comes before the form.
-  const createCard = () => `<div class="actions"><button class="act" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button></div>`;
+  const createCard = () => `<div class="actions"><button class="act hl" id="aCreate"><span class="ic" aria-hidden="true">👤</span><div><b>${L("Crear cuenta", "Create account")}</b><span>${L("Primera vez: lee el reglamento", "First time: read the rules")}</span></div><span class="ch">${I.next}</span></button></div>`;
+  // First-visit popup on Inicio (18 Nov, User): shown only when no details are saved (Guardar mis datos / personal link set user), on every page load until closed (not remembered: a refresh shows it again).
+  let welcomeClosed = false;
+  const welcomeSeen = () => welcomeClosed;
+  const welcomeDone = () => { welcomeClosed = true; };
+  const welcomePop = () => `<div class="wpop" id="wPop" role="dialog" aria-modal="true" aria-labelledby="wT"><div class="wbox">
+      <div class="wlang">${langSwitch()}</div>
+      <button class="wx" id="wX" aria-label="${L("Cerrar", "Close")}">✕</button>
+      <span class="ic" aria-hidden="true">👋</span>
+      <h2 id="wT">${L("¿Primera vez en este sitio web?", "First time on this website?")}</h2>
+      <button class="cta" id="wYes">${L("Sí, crear una cuenta", "Yes, create an account")}</button>
+      <a class="wno" id="wNo" href="entrar.html">${L("No, ingresar usuario", "No, log in")}</a>
+    </div></div>`;
   function vHome() {
     return topbar("Taller ESET", "Fab Lab 2026-2027", false) + `<div class="scr">${demoNote()}
       <div class="hero"><div class="stripe" aria-hidden="true"></div>
@@ -379,6 +391,7 @@ const CONFIG = {
       </div>
       ${user ? "" : createCard()}
       ${user ? "" : saveCard()}
+      ${user || welcomeSeen() ? "" : welcomePop()}
       ${user ? `<label class="chk" for="rem"><input type="checkbox" id="rem" ${remembered() ? "checked" : ""}><span>${L("<b>Recordarme en este dispositivo.</b> No lo marques en un ordenador del taller.", "<b>Remember me on this device.</b> Don't tick it on a workshop computer.")}</span></label>` : ""}
     </div>`;
   }
@@ -649,6 +662,10 @@ const CONFIG = {
     on("mmNext", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i < ms.length - 1) { S.mmonth = ms[i + 1]; render(); } });
     app.querySelectorAll(".day[data-mk]").forEach(b => b.onclick = () => { S.mday = S.mday === b.dataset.mk ? null : b.dataset.mk; render(); const c = app.querySelector('.bk[data-bk="' + S.mday + '"]'); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); });
     on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
+    on("wYes", () => { welcomeDone(); S.screen = "gate"; render(); window.scrollTo(0, 0); });
+    on("wNo", welcomeDone);
+    on("wX", () => { welcomeDone(); render(); });
+    if ($("wPop")) $("wYes").focus();   // only the 2 buttons and ✕ close it (no click outside, no Esc)
     on("aCreate", () => { S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("gGo", () => { if (!(S.readDone && S.readTick && (!CONFIG.PRINT3D || S.readTick3d))) return; S.sheet = "create"; render(); });
     const ack = $("ack"); if (ack) ack.onchange = () => { S.ack = ack.checked; try { sessionStorage.setItem("eset_ack", S.ack ? "1" : "0"); } catch(e) {} render(); };
@@ -669,7 +686,7 @@ const CONFIG = {
     on("mPrev", () => { const ms = months(), i = ms.indexOf(S.month); if (i > 0) { S.month = ms[i - 1]; render(); } });
     on("mNext", () => { const ms = months(), i = ms.indexOf(S.month); if (i < ms.length - 1) { S.month = ms[i + 1]; render(); } });
     app.querySelectorAll(".hr:not(.busy)").forEach(b => b.onclick = () => { S.slot = slotsFor(S.day)[+b.dataset.i]; render(); });
-    document.onkeydown = e => { if (e.key === "Escape" && S.sheet) { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); } };
+    document.onkeydown = e => { if ($("wPop")) return; if (e.key === "Escape" && S.sheet) { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); } };
     if (S.screen === "mis" && user && user.k && !S.mine && !S.mineLoading && !S.mineErr) loadMine();
   }
   render();

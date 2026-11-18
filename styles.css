@@ -259,3 +259,17 @@ button{font:inherit;color:inherit}
 .rsw{display:inline-flex;gap:4px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:3px;margin-left:auto}
 .rsw button{all:unset;cursor:pointer;padding:5px 10px;border-radius:8px;font:600 13px var(--f-display);color:var(--muted)}
 .rsw button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* First-visit popup on Inicio (18 Nov) */
+.wpop{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(10,12,16,.55)}
+.wbox{position:relative;width:100%;max-width:380px;box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:28px 20px 20px;display:grid;gap:12px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.wbox .ic{font-size:34px;line-height:1}
+.wbox h2{margin:0 0 6px;font:700 22px/1.2 var(--f-display)}
+.wbox .cta{width:100%}
+.wno{display:block;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--app);color:var(--ink);font-weight:600;text-decoration:none}
+.wx{all:unset;cursor:pointer;position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+.wlang{position:absolute;top:10px;left:10px}
+/* Crear cuenta card on Inicio: high-contrast animated border (18 Nov) */
+@property --ha{syntax:"<angle>";inherits:false;initial-value:0deg}
+.act.hl{border:3px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,conic-gradient(from var(--ha),var(--accent),var(--ink),var(--accent),var(--ink),var(--accent)) border-box;animation:hlspin 3s linear infinite}
+@keyframes hlspin{to{--ha:360deg}}
+@media (prefers-reduced-motion:reduce){.act.hl{animation:none}}
