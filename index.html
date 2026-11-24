@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124b">
+<link rel="stylesheet" href="styles.css?v=20261124c">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -384,6 +384,19 @@ const CONFIG = {
       <button class="cta" id="wYes">${L("Sí, crear una cuenta", "Yes, create an account")}</button>
       <a class="wno" id="wNo" href="entrar.html">${L("No, ingresar usuario", "No, log in")}</a>
     </div></div>`;
+  // "Una persona" card on Solicitar cita (24 Nov, User): blocks the calendar until the button is clicked; the button
+  // unlocks after a 3-second countdown. Not remembered: a page reload shows it again. Only the button closes it.
+  const ONE_WAIT = 3;
+  let oneOk = false, oneT0 = 0, oneTimer = null;
+  const oneLeft = () => oneT0 ? Math.max(0, ONE_WAIT - Math.floor((Date.now() - oneT0) / 1000)) : ONE_WAIT;
+  const oneBtnText = n => L("Entiendo y estoy de acuerdo", "I understand and agree") + (n > 0 ? ` (${n})` : "");
+  const onePop = () => { const n = oneLeft();
+    return `<div class="wpop opop" id="oPop" role="alertdialog" aria-modal="true" aria-labelledby="oT"><div class="wbox obox">
+      <div class="wlang">${langSwitch()}</div>
+      <span class="ic" aria-hidden="true">⚠️</span>
+      <h2 id="oT">${L("Solo <u>UNA</u> persona de esta cita puede estar cortando.", "Only <u>ONE</u> person from this booking can be cutting.")}</h2>
+      <button class="cta" id="oOk" ${n > 0 ? 'aria-disabled="true"' : ""}>${oneBtnText(n)}</button>
+    </div></div>`; };
   function vHome() {
     return topbar("Taller ESET", "Fab Lab 2026-2027", false) + `<div class="scr">${demoNote()}
       <div class="hero"><div class="stripe" aria-hidden="true"></div>
@@ -588,7 +601,7 @@ const CONFIG = {
       ${body}
       <label class="chk ackbox" for="ack"><input type="checkbox" id="ack" ${S.ack ? "checked" : ""}><span>${L("<b>He leído el reglamento y mi archivo lo cumple.</b> (Está al lado o al final de la página.)", "<b>I have read the rules and my file meets them.</b> (They're beside or at the bottom of the page.)")}</span></label>
       <div class="bar"><button class="cta" id="cta" ${ready ? "" : 'aria-disabled="true"'}>${S.slot ? `${L("Reservar", "Book")} ${pad(sel.h)}:${pad(sel.min)}<small>${S.ack ? esc(S.machine) + " · " + esc(fDay(S.slot.start)) : L("Marca la casilla del reglamento", "Tick the rules box")}</small>` : `${L("Elige una hora", "Choose an hour")}<small>${L("Toca una hora libre", "Tap a free hour")}</small>`}</button></div>
-      </div>${rulesPanel(false)}</div>`;
+      </div>${rulesPanel(false)}</div>${oneOk ? "" : onePop()}`;
   }
   function vSheet() {
     const foot = href => `<div class="sfoot">${L("¿No carga?", "Not loading?")} <a href="${esc(href)}" target="_blank" rel="noopener">${L("Abrir el formulario", "Open the form")}</a></div>`;
@@ -679,6 +692,14 @@ const CONFIG = {
     on("wYes", () => { welcomeDone(); S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("wNo", welcomeDone);
     on("wX", () => { welcomeDone(); render(); });
+    if ($("oPop")) {   // countdown keeps running across re-renders (language switch); only "Entiendo y estoy de acuerdo" closes it
+      if (!oneT0) oneT0 = Date.now();
+      const tick = () => { const b = $("oOk"); if (!b) { clearInterval(oneTimer); oneTimer = null; return; }
+        const n = oneLeft(); b.textContent = oneBtnText(n); if (n > 0) b.setAttribute("aria-disabled", "true"); else { b.removeAttribute("aria-disabled"); clearInterval(oneTimer); oneTimer = null; } };
+      if (!oneTimer && oneLeft() > 0) oneTimer = setInterval(tick, 200);
+      on("oOk", () => { if (oneLeft() > 0) return; oneOk = true; render(); });
+      $("oOk").focus();
+    }
     if ($("wPop")) $("wYes").focus();   // only the 2 buttons and ✕ close it (no click outside, no Esc)
     on("aCreate", () => { S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("gGo", () => { if (!(S.readDone && S.readTick && (!CONFIG.PRINT3D || S.readTick3d))) return; S.sheet = "create"; render(); });
@@ -700,7 +721,7 @@ const CONFIG = {
     on("mPrev", () => { const ms = months(), i = ms.indexOf(S.month); if (i > 0) { S.month = ms[i - 1]; render(); } });
     on("mNext", () => { const ms = months(), i = ms.indexOf(S.month); if (i < ms.length - 1) { S.month = ms[i + 1]; render(); } });
     app.querySelectorAll(".hr:not(.busy)").forEach(b => b.onclick = () => { S.slot = slotsFor(S.day)[+b.dataset.i]; render(); });
-    document.onkeydown = e => { if ($("wPop")) return; if (e.key === "Escape" && S.sheet) { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); } };
+    document.onkeydown = e => { if ($("wPop") || $("oPop")) return; if (e.key === "Escape" && S.sheet) { const was = S.sheet; S.sheet = false; if (was === "cancel") { S.cx = null; loadMine(); } else render(); } };
     if (S.screen === "mis" && user && user.k && !S.mine && !S.mineLoading && !S.mineErr) loadMine();
   }
   render();

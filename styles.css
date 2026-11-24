@@ -271,6 +271,15 @@ button{font:inherit;color:inherit}
 .wno{display:block;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--app);color:var(--ink);font-weight:600;text-decoration:none}
 .wx{all:unset;cursor:pointer;position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
 .wlang{position:absolute;top:10px;left:10px}
+/* "Una persona" card on Solicitar cita: bigger than the Crear cuenta popup, button locked for 3 s */
+.opop{z-index:70;background:rgba(10,12,16,.7)}
+.obox{max-width:560px;padding:64px 28px 28px;gap:20px}
+.obox .ic{font-size:56px}
+.obox h2{font-size:30px;line-height:1.2;text-wrap:balance}
+.obox h2 u{text-decoration-thickness:3px;text-underline-offset:4px}
+.obox .cta{font-size:18px;min-height:56px}
+.obox .cta[aria-disabled="true"]{opacity:.45;filter:grayscale(1);cursor:not-allowed}
+@media (max-width:520px){.obox{padding:60px 18px 20px}.obox h2{font-size:25px}}
 /* Crear cuenta card on Inicio: high-contrast animated border (18 Nov) */
 @property --ha{syntax:"<angle>";inherits:false;initial-value:0deg}
 .act.hl{border:3px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,conic-gradient(from var(--ha),var(--accent),var(--ink),var(--accent),var(--ink),var(--accent)) border-box;animation:hlspin 3s linear infinite}
