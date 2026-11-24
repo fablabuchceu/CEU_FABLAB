@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261124">
+<link rel="stylesheet" href="styles.css?v=20261124b">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -363,7 +363,7 @@ const CONFIG = {
   function topbar(title, sub, back) {
     const me = user ? `<div class="me"><i aria-hidden="true">${esc(user.e[0].toUpperCase())}</i><button id="out" title="${L("Borrar mis datos de este dispositivo", "Remove my details from this device")}">${L("Borrar", "Forget")}</button></div>` : "";
     const sl = (CONFIG.SUGGESTIONS || {})[S.lang];
-    const sug = sl ? `<a class="sug" href="${esc(sl)}" target="_blank" rel="noopener" title="${L("Sugerencias o problemas con la web", "Suggestions or problems with the website")}"><span aria-hidden="true">💡</span><span class="sugt">${L("Sugerencias", "Suggestions")}</span></a>` : "";
+    const sug = sl ? `<button class="sug" id="sug" title="${L("Sugerencias o problemas con la web", "Suggestions or problems with the website")}"><span aria-hidden="true">💡</span><span class="sugt">${L("Sugerencias", "Suggestions")}</span></button>` : "";
     return `<div class="top">${sug}${back ?`<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
   }
   const demoNote = () => DEMO ? `<div class="demo">${L("Modo demostración: horas de ejemplo", "Demo mode: example hours")}</div>` : "";
@@ -600,6 +600,12 @@ const CONFIG = {
         <div class="shead"><div><b id="shT">${L("Crear cuenta", "Create account")}</b><span>${L("Confirma desde tu correo en 1 hora", "Confirm from your email within 1 hour")}</span></div>${closeBtn}</div>
         ${frame}${foot(CONFIG.CREATE_URL + "?" + q)}</div>`;
     }
+    if (S.sheet === "sug") {
+      const open = (CONFIG.SUGGESTIONS || {})[S.lang] || "", embed = open.replace("airtable.com/", "airtable.com/embed/");
+      return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+        <div class="shead"><div><b id="shT">💡 ${L("Sugerencias", "Suggestions")}</b><span>${L("Sugerencias o problemas con la web o los formularios", "Suggestions or problems with the website or the forms")}</span></div>${closeBtn}</div>
+        <iframe title="${L("Sugerencias", "Suggestions")}" src="${esc(embed)}" loading="eager"></iframe>${foot(open)}</div>`;
+    }
     if (S.sheet === "cxinfo") {
       return `<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
         <div class="shead"><div><b id="shT">❌ ${L("Cancelar cita", "Cancel a booking")}</b><span>${esc(user ? user.e : "")}</span></div>${closeBtn}</div>
@@ -645,7 +651,8 @@ const CONFIG = {
       swapParts(vw, rail() + vPrint3d(), [".rail", ".top"]);
       try { v3old.contentWindow.postMessage({ type: "lang", lang: S.lang }, location.origin); } catch (e) {}
     } else vw.innerHTML = rail() + (V[S.screen] || vHome)();
-    const sheetKey = S.sheet ? S.sheet + "|" + (S.sheet === "cancel" ? (S.cx ? S.cx.id : "") : S.slot ? S.slot.label : "") : "";
+    // Sugerencias: the key includes the language, so switching ES/EN loads the other language's form.
+    const sheetKey = S.sheet ? S.sheet + "|" + (S.sheet === "sug" ? S.lang : S.sheet === "cancel" ? (S.cx ? S.cx.id : "") : S.slot ? S.slot.label : "") : "";
     if (sheetKey !== shownSheet || !sheetKey) sh.innerHTML = vSheet();
     else swapParts(sh, vSheet(), [".shead", ".sfoot"]);   // same sheet open: new texts, same form iframe
     shownSheet = sheetKey; shownScreen = S.screen;
@@ -667,6 +674,7 @@ const CONFIG = {
     on("mmPrev", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i > 0) { S.mmonth = ms[i - 1]; render(); } });
     on("mmNext", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i < ms.length - 1) { S.mmonth = ms[i + 1]; render(); } });
     app.querySelectorAll(".day[data-mk]").forEach(b => b.onclick = () => { S.mday = S.mday === b.dataset.mk ? null : b.dataset.mk; render(); const c = app.querySelector('.bk[data-bk="' + S.mday + '"]'); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); });
+    on("sug", () => { S.sheet = "sug"; render(); });
     on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
     on("wYes", () => { welcomeDone(); S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("wNo", welcomeDone);
