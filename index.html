@@ -384,11 +384,12 @@ const CONFIG = {
       <button class="cta" id="wYes">${L("Sí, crear una cuenta", "Yes, create an account")}</button>
       <a class="wno" id="wNo" href="entrar.html">${L("No, ingresar usuario", "No, log in")}</a>
     </div></div>`;
-  // "Una persona" card on Solicitar cita (24 Nov, User): blocks the calendar until the button is clicked; the button
-  // unlocks after a 3-second countdown. Not remembered: a page reload shows it again. Only the button closes it.
-  const ONE_WAIT = 3;
-  let oneOk = false, oneT0 = 0, oneTimer = null;
-  const oneLeft = () => oneT0 ? Math.max(0, ONE_WAIT - Math.floor((Date.now() - oneT0) / 1000)) : ONE_WAIT;
+  // "Una persona" card (24 Nov, User), two moments; the button is the only way to close it:
+  //  - every time Solicitar cita is opened (from another screen or a reload): no countdown;
+  //  - EVERY click on Reservar: 2-second countdown, then the button opens the booking form.
+  const ONE_WAIT = 2;
+  let calOk = false, oneMode = "", oneT0 = 0, oneTimer = null;   // oneMode: "book" while the Reservar card is up
+  const oneLeft = () => oneMode !== "book" ? 0 : oneT0 ? Math.max(0, ONE_WAIT - Math.floor((Date.now() - oneT0) / 1000)) : ONE_WAIT;
   const oneBtnText = n => L("Entiendo y estoy de acuerdo", "I understand and agree") + (n > 0 ? ` (${n})` : "");
   const onePop = () => { const n = oneLeft();
     return `<div class="wpop opop" id="oPop" role="alertdialog" aria-modal="true" aria-labelledby="oT"><div class="wbox obox">
@@ -601,7 +602,7 @@ const CONFIG = {
       ${body}
       <label class="chk ackbox" for="ack"><input type="checkbox" id="ack" ${S.ack ? "checked" : ""}><span>${L("<b>He leído el reglamento y mi archivo lo cumple.</b> (Está al lado o al final de la página.)", "<b>I have read the rules and my file meets them.</b> (They're beside or at the bottom of the page.)")}</span></label>
       <div class="bar"><button class="cta" id="cta" ${ready ? "" : 'aria-disabled="true"'}>${S.slot ? `${L("Reservar", "Book")} ${pad(sel.h)}:${pad(sel.min)}<small>${S.ack ? esc(S.machine) + " · " + esc(fDay(S.slot.start)) : L("Marca la casilla del reglamento", "Tick the rules box")}</small>` : `${L("Elige una hora", "Choose an hour")}<small>${L("Toca una hora libre", "Tap a free hour")}</small>`}</button></div>
-      </div>${rulesPanel(false)}</div>${oneOk ? "" : onePop()}`;
+      </div>${rulesPanel(false)}</div>${oneMode === "book" || !calOk ? onePop() : ""}`;
   }
   function vSheet() {
     const foot = href => `<div class="sfoot">${L("¿No carga?", "Not loading?")} <a href="${esc(href)}" target="_blank" rel="noopener">${L("Abrir el formulario", "Open the form")}</a></div>`;
@@ -660,6 +661,7 @@ const CONFIG = {
     const V = { home: vHome, laser: vLaser, gate: vGate, tut: vTut, print3d: vPrint3d, cal: vCal, mis: vMis };
     if (!$("vw")) app.innerHTML = '<div id="vw" class="keep"></div><div id="sh" class="keep"></div>';
     const vw = $("vw"), sh = $("sh"), v3old = $("v3");
+    if (S.screen === "cal" && shownScreen !== "cal") calOk = false;   // the "una persona" card shows every time Solicitar cita is opened
     if (S.screen === "print3d" && shownScreen === "print3d" && v3old && CONFIG.PRINT3D) {
       swapParts(vw, rail() + vPrint3d(), [".rail", ".top"]);
       try { v3old.contentWindow.postMessage({ type: "lang", lang: S.lang }, location.origin); } catch (e) {}
@@ -688,7 +690,7 @@ const CONFIG = {
     on("mmNext", () => { const ms = misMonths(), i = ms.indexOf(S.mmonth); if (i < ms.length - 1) { S.mmonth = ms[i + 1]; render(); } });
     app.querySelectorAll(".day[data-mk]").forEach(b => b.onclick = () => { S.mday = S.mday === b.dataset.mk ? null : b.dataset.mk; render(); const c = app.querySelector('.bk[data-bk="' + S.mday + '"]'); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); });
     on("sug", () => { S.sheet = "sug"; render(); });
-    on("cta", () => { if (!S.slot || !S.ack) return; S.sheet = "book"; render(); });
+    on("cta", () => { if (!S.slot || !S.ack) return; oneMode = "book"; oneT0 = 0; render(); });   // the 2-second card every time; its button opens the form
     on("wYes", () => { welcomeDone(); S.screen = "gate"; render(); window.scrollTo(0, 0); });
     on("wNo", welcomeDone);
     on("wX", () => { welcomeDone(); render(); });
@@ -697,7 +699,8 @@ const CONFIG = {
       const tick = () => { const b = $("oOk"); if (!b) { clearInterval(oneTimer); oneTimer = null; return; }
         const n = oneLeft(); b.textContent = oneBtnText(n); if (n > 0) b.setAttribute("aria-disabled", "true"); else { b.removeAttribute("aria-disabled"); clearInterval(oneTimer); oneTimer = null; } };
       if (!oneTimer && oneLeft() > 0) oneTimer = setInterval(tick, 200);
-      on("oOk", () => { if (oneLeft() > 0) return; oneOk = true; render(); });
+      on("oOk", () => { if (oneLeft() > 0) return; const wasBook = oneMode === "book"; calOk = true; oneMode = "";
+        if (wasBook && S.slot && S.ack) S.sheet = "book"; render(); });
       $("oOk").focus();
     }
     if ($("wPop")) $("wYes").focus();   // only the 2 buttons and ✕ close it (no click outside, no Esc)
