@@ -8,7 +8,7 @@
 <title>Taller ESET - Reservas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261118">
+<link rel="stylesheet" href="styles.css?v=20261124">
 </head>
 <body>
 <div class="app" id="app" aria-live="polite"></div>
@@ -96,6 +96,10 @@ const CONFIG = {
     "Helix 50W":       { es: "https://www.canva.com/design/DAHZSUQoKsU/1JmP6-q4dM0Mzf3OGqXs_w/view",
                          en: "https://www.canva.com/design/DAHanGpWCgw/KNEIbzUmLE12gZcH0xMZqQ/view" },
   },
+  // Sugerencias button (top left of every screen, 24 Nov). Base "Sugerencias" appEIvJe9wom5d92p: one form per language,
+  // same table. The button opens the form of the page language in a new tab. Empty link = button hidden.
+  SUGGESTIONS: { es: "https://airtable.com/appEIvJe9wom5d92p/pagh3aAJRL2xVrDz7/form",
+                 en: "https://airtable.com/appEIvJe9wom5d92p/pagj31he9cFpIIrkI/form" },
   RULES_URL: "https://ceu365.sharepoint.com/sites/Becarios/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable%2FRequisitos%20obligatorios%20para%20el%20corte%20l%C3%A1ser%20CO2%20%2D%20Taller%20ESET%2Epdf&parent=%2Fsites%2FBecarios%2FDocumentos%20compartidos%2FGeneral%2FDocumentos%20Airtable&p=true&ga=1",
 
   // Tutoriales tab (laser): shows the Canva document (RULES_EMBED) and, below it, any extra videos listed here. One entry per video. SharePoint/Stream video: Share → Embed code → copy the
@@ -358,7 +362,9 @@ const CONFIG = {
   // ---- Views ----
   function topbar(title, sub, back) {
     const me = user ? `<div class="me"><i aria-hidden="true">${esc(user.e[0].toUpperCase())}</i><button id="out" title="${L("Borrar mis datos de este dispositivo", "Remove my details from this device")}">${L("Borrar", "Forget")}</button></div>` : "";
-    return `<div class="top">${back ? `<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
+    const sl = (CONFIG.SUGGESTIONS || {})[S.lang];
+    const sug = sl ? `<a class="sug" href="${esc(sl)}" target="_blank" rel="noopener" title="${L("Sugerencias o problemas con la web", "Suggestions or problems with the website")}"><span aria-hidden="true">💡</span><span class="sugt">${L("Sugerencias", "Suggestions")}</span></a>` : "";
+    return `<div class="top">${sug}${back ?`<button class="back" id="back" aria-label="${L("Atrás", "Back")}">${I.back}</button>` : ""}<div class="ttl"><b>${title}</b><span>${sub}</span></div>${langSwitch()}${me}</div>`;
   }
   const demoNote = () => DEMO ? `<div class="demo">${L("Modo demostración: horas de ejemplo", "Demo mode: example hours")}</div>` : "";
   const docCard = () => `<a class="doc" href="${esc(pdfHref())}" target="_blank" rel="noopener"><span class="ic">DOC</span><div><b>${L("Reglamento y uso", "Rules and usage")}</b><span>${L("Léelo antes de reservar", "Read it before booking")}</span></div><span class="ch" style="width:18px;height:18px">${I.next}</span></a>`;

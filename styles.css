@@ -162,6 +162,9 @@ button{font:inherit;color:inherit}
 .rules{background:var(--surface);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;min-width:0}
 .rhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rhead b{flex:1;min-width:160px;font:700 18px/1.15 var(--f-display)}
+.sug{flex:none;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none;font:600 13px var(--f-body);white-space:nowrap}
+.sug:hover{border-color:var(--accent)}
+@media (max-width:520px){.sug{padding:0 10px}.sug .sugt{display:none}}
 .lang{flex:none;display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--field)}
 .lang button{all:unset;cursor:pointer;font:600 12px var(--f-mono);padding:5px 10px;border-radius:999px;color:var(--muted)}
 .lang button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
